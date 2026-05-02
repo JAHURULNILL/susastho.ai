@@ -16,18 +16,23 @@ class AppTheme {
       useMaterial3: true,
     );
 
-    final textTheme = GoogleFonts.notoSansBengaliTextTheme(base.textTheme).copyWith(
-      headlineLarge: GoogleFonts.notoSansBengali(
+    final textTheme = TextTheme(
+      headlineLarge: GoogleFonts.hindSiliguri(
         fontSize: 28,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
       ),
-      headlineMedium: GoogleFonts.notoSansBengali(
+      headlineMedium: GoogleFonts.hindSiliguri(
         fontSize: 24,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
       ),
-      titleLarge: GoogleFonts.notoSansBengali(
+      headlineSmall: GoogleFonts.hindSiliguri(
+        fontSize: 20,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textPrimary,
+      ),
+      titleLarge: GoogleFonts.hindSiliguri(
         fontSize: 20,
         fontWeight: FontWeight.w700,
         color: AppColors.textPrimary,
@@ -38,17 +43,17 @@ class AppTheme {
         color: AppColors.textPrimary,
       ),
       bodyLarge: GoogleFonts.notoSansBengali(
-        fontSize: 15,
-        height: 1.45,
+        fontSize: 14,
+        height: 1.55,
         color: AppColors.textPrimary,
       ),
       bodyMedium: GoogleFonts.notoSansBengali(
-        fontSize: 13.5,
-        height: 1.4,
+        fontSize: 12.5,
+        height: 1.45,
         color: AppColors.textSecondary,
       ),
       labelLarge: GoogleFonts.notoSansBengali(
-        fontSize: 15,
+        fontSize: 14,
         fontWeight: FontWeight.w700,
         color: Colors.white,
       ),
@@ -67,47 +72,44 @@ class AppTheme {
         color: Colors.white,
         elevation: 0,
         margin: EdgeInsets.zero,
+        shadowColor: AppColors.primaryMid.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppColors.border),
-        ),
-      ),
-      navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.white,
-        indicatorColor: AppColors.primaryLight,
-        labelTextStyle: WidgetStatePropertyAll(
-          GoogleFonts.notoSansBengali(
-            fontSize: 12.5,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: Colors.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        hintStyle: GoogleFonts.notoSansBengali(
+          color: AppColors.textMuted,
+          fontSize: 14,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(16),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(18),
-          borderSide: const BorderSide(color: AppColors.primaryDark, width: 1.3),
+          borderRadius: BorderRadius.circular(16),
+          borderSide: const BorderSide(color: AppColors.primaryDark, width: 1.2),
         ),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: AppColors.primaryDark,
-        foregroundColor: Colors.white,
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primaryDark,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+        ),
       ),
     );
   }

@@ -15,13 +15,29 @@ module.exports = async function handler(req, res) {
   const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   try {
-    const { imageBase64, mimeType, profile } = req.body ?? {};
-    if (!imageBase64 || !mimeType || !profile) {
-      return res.status(400).json({ error: 'imageBase64, mimeType এবং profile প্রয়োজন।' });
+    const { imageBase64, mimeType, profile, description } = req.body ?? {};
+    if ((!imageBase64 || !mimeType) && !description) {
+      return res.status(400).json({ error: 'imageBase64/mimeType অথবা description প্রয়োজন।' });
+    }
+
+    if (!profile) {
+      return res.status(400).json({ error: 'profile প্রয়োজন।' });
     }
 
     if (!geminiApiKey) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is missing on backend.' });
+    }
+
+    const prompt = buildNutritionPrompt(profile, description);
+    const contentParts = [{ text: prompt }];
+
+    if (imageBase64 && mimeType) {
+      contentParts.push({
+        inline_data: {
+          mime_type: mimeType,
+          data: imageBase64,
+        },
+      });
     }
 
     const response = await fetch(
@@ -35,23 +51,11 @@ module.exports = async function handler(req, res) {
           system_instruction: {
             parts: [
               {
-                text: 'আপনি একজন বাংলা ভাষাভিত্তিক ক্লিনিক্যাল নিউট্রিশন সহকারী। সব উত্তর খাঁটি বাংলায় দেবেন এবং শুধু JSON schema অনুসরণ করবেন।',
+                text: 'আপনি একজন বিশেষজ্ঞ বাংলাদেশি পুষ্টিবিদ। সব উত্তর বাংলায় দেবেন এবং শুধু JSON schema অনুসরণ করবেন।',
               },
             ],
           },
-          contents: [
-            {
-              parts: [
-                { text: buildNutritionPrompt(profile) },
-                {
-                  inline_data: {
-                    mime_type: mimeType,
-                    data: imageBase64,
-                  },
-                },
-              ],
-            },
-          ],
+          contents: [{ parts: contentParts }],
           generationConfig: {
             temperature: 0.2,
             response_mime_type: 'application/json',
@@ -81,43 +85,42 @@ module.exports = async function handler(req, res) {
   }
 };
 
-function buildNutritionPrompt(profile) {
+function buildNutritionPrompt(profile, description) {
   const conditions = Array.isArray(profile.conditions) && profile.conditions.length > 0
     ? profile.conditions.join(', ')
     : 'কোনো নির্দিষ্ট রোগ উল্লেখ নেই';
 
   return `
-ব্যবহারকারীর প্রোফাইল:
+তুমি একজন বিশেষজ্ঞ বাংলাদেশি পুষ্টিবিদ।
+ইউজারের তথ্য:
 - নাম: ${profile.name}
 - বয়স: ${profile.age}
-- ওজন: ${profile.weightKg} কেজি
-- উচ্চতা: ${profile.heightCm} সেমি
-- লক্ষ্য: ${profile.goal}
-- রোগ/অবস্থা: ${conditions}
+- ওজন: ${profile.weightKg}kg
+- উচ্চতা: ${profile.heightCm}cm
+- স্বাস্থ্য সমস্যা: ${conditions}
+- দৈনিক লক্ষ্য: ${profile.goal}
 
-ছবির খাবার বিশ্লেষণ করুন। সম্ভাব্য বাংলাদেশি খাবার হিসেবে শনাক্ত করুন।
-শুধু এই JSON format-এ উত্তর দিন:
+${description ? `ইউজার লিখেছে: "${description}"` : 'ছবিতে দেখা খাবার বিশ্লেষণ করো।'}
+
+শুধু JSON দাও:
 {
-  "foodName": "খাবারের নাম",
-  "macros": {
-    "calories": 0,
-    "protein": 0,
-    "carbs": 0,
-    "fat": 0
-  },
-  "pros": ["কারণ ১", "কারণ ২"],
-  "warnings": ["সতর্কতা ১", "সতর্কতা ২"],
-  "summary": "১-২ লাইনের বাংলা সারাংশ",
-  "healthScore": 0
+  "name": "খাবারের নাম (বাংলায়)",
+  "calories": 0,
+  "protein": 0,
+  "carbs": 0,
+  "fat": 0,
+  "fiber": 0,
+  "vitamins": ["ভিটামিন A"],
+  "minerals": ["আয়রন"],
+  "score": 85,
+  "score_reason": "কেন এই স্কোর",
+  "benefits": ["উপকার ১", "উপকার ২"],
+  "harms": ["সতর্কতা ১"],
+  "condition_advice": "ইউজারের সমস্যার জন্য নির্দিষ্ট পরামর্শ",
+  "timing_advice": "দিনের কোন সময়ে ভালো",
+  "portion_advice": "কতটুকু খাওয়া উচিত",
+  "alternative": "আরও স্বাস্থ্যকর দেশীয় বিকল্প"
 }
-
-বিশেষ নির্দেশনা:
-- ডায়াবেটিস থাকলে সাদা ভাত, মিষ্টি, high glycemic load নিয়ে সতর্ক করুন।
-- হৃদরোগ থাকলে cholesterol, saturated fat, অতিরিক্ত তেল নিয়ে সতর্ক করুন।
-- স্থূলতা বা পেটের চর্বি থাকলে portion control এবং carb/fat load নিয়ে সতর্ক করুন।
-- underweight থাকলে calorie density এবং protein quality নিয়ে ভালো দিক লিখুন।
-- ED বা urinary issues থাকলে hydration, zinc, excess spice/caffeine বিষয়ে প্রাসঙ্গিক পরামর্শ দিন।
-- উত্তর অবশ্যই বাংলায় দিন।
 `;
 }
 

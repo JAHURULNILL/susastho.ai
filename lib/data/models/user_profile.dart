@@ -9,11 +9,17 @@ enum UserGoal {
 enum HealthCondition {
   diabetes,
   heartDisease,
+  hypertension,
   underweight,
   obesity,
   bellyFat,
   ed,
+  prematureEjaculation,
   urinaryIssues,
+  fattyLiver,
+  kidneyIssues,
+  digestiveIssues,
+  insomnia,
 }
 
 extension UserGoalX on UserGoal {
@@ -35,11 +41,17 @@ extension HealthConditionX on HealthCondition {
   String get labelBn => switch (this) {
         HealthCondition.diabetes => 'ডায়াবেটিস',
         HealthCondition.heartDisease => 'হৃদরোগ',
+        HealthCondition.hypertension => 'উচ্চ রক্তচাপ',
         HealthCondition.underweight => 'আন্ডারওয়েট',
         HealthCondition.obesity => 'স্থূলতা',
         HealthCondition.bellyFat => 'পেটের চর্বি',
-        HealthCondition.ed => 'ইডি',
+        HealthCondition.ed => 'ইরেকটাইল ডিসফাংশন',
+        HealthCondition.prematureEjaculation => 'প্রিম্যাচিউর ইজাকুলেশন',
         HealthCondition.urinaryIssues => 'মূত্রজনিত সমস্যা',
+        HealthCondition.fattyLiver => 'ফ্যাটি লিভার',
+        HealthCondition.kidneyIssues => 'কিডনি সমস্যা',
+        HealthCondition.digestiveIssues => 'হজমজনিত সমস্যা',
+        HealthCondition.insomnia => 'ঘুমের সমস্যা',
       };
 
   String get key => name;

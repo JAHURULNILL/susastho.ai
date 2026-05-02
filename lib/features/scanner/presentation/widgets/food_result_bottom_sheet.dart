@@ -1,19 +1,28 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/utils/bengali_formatters.dart';
+import '../../../../core/widgets/primary_button.dart';
 import '../../../../data/models/food_analysis_result.dart';
+import '../../../home/providers/home_provider.dart';
 
-class FoodResultBottomSheet extends StatelessWidget {
+class FoodResultBottomSheet extends ConsumerWidget {
   const FoodResultBottomSheet({
     super.key,
     required this.result,
+    required this.imagePath,
   });
 
   final FoodAnalysisResult result;
+  final String? imagePath;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final image = imagePath == null ? null : File(imagePath!);
+
     return SafeArea(
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
@@ -21,93 +30,105 @@ class FoodResultBottomSheet extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            Center(
-              child: Container(
-                width: 44,
-                height: 5,
-                decoration: BoxDecoration(
-                  color: AppColors.border,
-                  borderRadius: BorderRadius.circular(99),
+            if (image != null && image.existsSync()) ...[
+              ClipRRect(
+                borderRadius: BorderRadius.circular(18),
+                child: Image.file(
+                  image,
+                  width: double.infinity,
+                  height: 190,
+                  fit: BoxFit.cover,
                 ),
               ),
-            ),
-            const SizedBox(height: 18),
-            Text(
-              result.foodName,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
+              const SizedBox(height: 18),
+            ],
+            Text(result.foodName, style: Theme.of(context).textTheme.headlineSmall),
             const SizedBox(height: 10),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
                 color: _scoreColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(30),
+                borderRadius: BorderRadius.circular(999),
               ),
               child: Text(
-                'স্বাস্থ্য স্কোর ${BengaliFormatters.toBengaliNumber(result.healthScore)}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                'স্বাস্থ্য স্কোর: ${BengaliFormatters.toBengaliNumber(result.healthScore)}/১০০',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: _scoreColor,
-                      fontWeight: FontWeight.w700,
                     ),
               ),
-            ),
-            const SizedBox(height: 10),
-            if (result.modelName != null || result.modelId != null) ...[
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.auto_awesome_rounded, color: AppColors.primaryDark, size: 18),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _modelLabel(),
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: AppColors.textPrimary,
-                            ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 10),
-            ],
-            Text(
-              result.summary,
-              style: Theme.of(context).textTheme.bodyLarge,
             ),
             const SizedBox(height: 18),
-            Row(
-              children: [
-                _MacroStat(label: 'ক্যালরি', value: result.macros.calories, unit: 'kcal'),
-                _MacroStat(label: 'প্রোটিন', value: result.macros.protein, unit: 'g'),
-              ],
-            ),
+            _SectionTitle(title: 'পুষ্টিমান'),
             const SizedBox(height: 10),
-            Row(
+            GridView.count(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              crossAxisCount: 2,
+              childAspectRatio: 1.6,
+              crossAxisSpacing: 10,
+              mainAxisSpacing: 10,
               children: [
-                _MacroStat(label: 'কার্বস', value: result.macros.carbs, unit: 'g'),
-                _MacroStat(label: 'ফ্যাট', value: result.macros.fat, unit: 'g'),
+                _MacroCard(label: 'ক্যালরি', value: '${result.macros.calories.round()}kcal', color: AppColors.primaryPale),
+                _MacroCard(label: 'প্রোটিন', value: '${result.macros.protein.toStringAsFixed(1)}g', color: const Color(0xFFEAF0FF)),
+                _MacroCard(label: 'কার্বস', value: '${result.macros.carbs.toStringAsFixed(1)}g', color: AppColors.primaryFaint),
+                _MacroCard(label: 'ফ্যাট', value: '${result.macros.fat.toStringAsFixed(1)}g', color: AppColors.warningPale),
               ],
             ),
-            const SizedBox(height: 20),
-            _SectionTitle(
-              title: 'আপনার জন্য ভালো দিক',
-              color: AppColors.success,
-            ),
+            if (result.fiber != null || result.vitamins.isNotEmpty || result.minerals.isNotEmpty) ...[
+              const SizedBox(height: 18),
+              _SectionTitle(title: 'অতিরিক্ত পুষ্টি'),
+              const SizedBox(height: 8),
+              if (result.fiber != null) Text('ফাইবার: ${result.fiber!.toStringAsFixed(1)}g'),
+              if (result.vitamins.isNotEmpty) Text('ভিটামিন: ${result.vitamins.join(', ')}'),
+              if (result.minerals.isNotEmpty) Text('মিনারেল: ${result.minerals.join(', ')}'),
+            ],
+            const SizedBox(height: 18),
+            _SectionTitle(title: 'আপনার জন্য ভালো দিক', color: AppColors.success),
             const SizedBox(height: 8),
             ...result.pros.map((item) => _InsightTile(text: item, color: AppColors.success)),
-            const SizedBox(height: 12),
-            _SectionTitle(
-              title: 'সতর্কতা',
-              color: AppColors.warning,
-            ),
+            const SizedBox(height: 14),
+            _SectionTitle(title: 'সতর্কতা', color: AppColors.warning),
             const SizedBox(height: 8),
             ...result.warnings.map((item) => _InsightTile(text: item, color: AppColors.warning)),
+            if ((result.conditionAdvice ?? '').isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _SectionTitle(title: 'আপনার সমস্যা অনুযায়ী পরামর্শ'),
+              const SizedBox(height: 8),
+              _AdviceCard(text: result.conditionAdvice!),
+            ],
+            if ((result.timingAdvice ?? '').isNotEmpty || (result.portionAdvice ?? '').isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _SectionTitle(title: 'কখন ও কতটুকু'),
+              const SizedBox(height: 8),
+              if ((result.timingAdvice ?? '').isNotEmpty) _AdviceCard(text: result.timingAdvice!),
+              if ((result.portionAdvice ?? '').isNotEmpty) ...[
+                const SizedBox(height: 8),
+                _AdviceCard(text: result.portionAdvice!),
+              ],
+            ],
+            if ((result.alternative ?? '').isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _SectionTitle(title: 'স্বাস্থ্যকর বিকল্প'),
+              const SizedBox(height: 8),
+              _AdviceCard(text: result.alternative!),
+            ],
+            const SizedBox(height: 18),
+            PrimaryButton(
+              label: '+ আজকের খাবারে যোগ করুন',
+              icon: Icons.add_circle_outline_rounded,
+              onPressed: () async {
+                await ref.read(dailySummaryProvider.notifier).addMeal(
+                      result,
+                      imagePath: imagePath,
+                    );
+                if (context.mounted) {
+                  Navigator.of(context).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('আজকের খাবারের তালিকায় যোগ করা হয়েছে।')),
+                  );
+                }
+              },
+            ),
           ],
         ),
       ),
@@ -115,51 +136,43 @@ class FoodResultBottomSheet extends StatelessWidget {
   }
 
   Color get _scoreColor {
-    if (result.healthScore >= 75) {
+    if (result.healthScore >= 80) {
       return AppColors.success;
     }
     if (result.healthScore >= 50) {
-      return const Color(0xFFE09B1F);
+      return AppColors.warning;
     }
-    return AppColors.warning;
-  }
-
-  String _modelLabel() {
-    final version = result.modelVersion == null || result.modelVersion!.isEmpty
-        ? ''
-        : ' • ${result.modelVersion}';
-    return 'বিশ্লেষণে ব্যবহৃত মডেল: ${result.modelName ?? result.modelId ?? 'অজানা'}$version';
+    return AppColors.danger;
   }
 }
 
-class _MacroStat extends StatelessWidget {
-  const _MacroStat({
+class _MacroCard extends StatelessWidget {
+  const _MacroCard({
     required this.label,
     required this.value,
-    required this.unit,
+    required this.color,
   });
 
   final String label;
-  final double value;
-  final String unit;
+  final String value;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Card(
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Column(
-            children: [
-              Text(
-                BengaliFormatters.toBengaliNumber(value, fractionDigits: 0),
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 4),
-              Text('$label $unit'),
-            ],
-          ),
-        ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 6),
+          Text(value, style: Theme.of(context).textTheme.titleLarge),
+        ],
       ),
     );
   }
@@ -168,7 +181,7 @@ class _MacroStat extends StatelessWidget {
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({
     required this.title,
-    required this.color,
+    this.color = AppColors.textPrimary,
   });
 
   final String title;
@@ -206,6 +219,25 @@ class _InsightTile extends StatelessWidget {
         text,
         style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: color),
       ),
+    );
+  }
+}
+
+class _AdviceCard extends StatelessWidget {
+  const _AdviceCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryFaint,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
     );
   }
 }

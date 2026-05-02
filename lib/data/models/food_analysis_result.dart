@@ -38,6 +38,13 @@ class FoodAnalysisResult {
     required this.warnings,
     required this.summary,
     required this.healthScore,
+    this.conditionAdvice,
+    this.timingAdvice,
+    this.portionAdvice,
+    this.alternative,
+    this.fiber,
+    this.vitamins = const [],
+    this.minerals = const [],
     this.modelId,
     this.modelName,
     this.modelVersion,
@@ -49,6 +56,13 @@ class FoodAnalysisResult {
   final List<String> warnings;
   final String summary;
   final int healthScore;
+  final String? conditionAdvice;
+  final String? timingAdvice;
+  final String? portionAdvice;
+  final String? alternative;
+  final double? fiber;
+  final List<String> vitamins;
+  final List<String> minerals;
   final String? modelId;
   final String? modelName;
   final String? modelVersion;
@@ -57,12 +71,23 @@ class FoodAnalysisResult {
     final model = json['model'] as Map<String, dynamic>?;
 
     return FoodAnalysisResult(
-      foodName: json['foodName'] as String? ?? 'অজানা খাবার',
-      macros: NutritionMacro.fromJson(json['macros'] as Map<String, dynamic>? ?? {}),
-      pros: ((json['pros'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
-      warnings: ((json['warnings'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
-      summary: json['summary'] as String? ?? '',
-      healthScore: (json['healthScore'] as num?)?.toInt() ?? 50,
+      foodName: json['foodName'] as String? ?? json['name'] as String? ?? 'অজানা খাবার',
+      macros: NutritionMacro.fromJson(json['macros'] as Map<String, dynamic>? ?? json),
+      pros: ((json['pros'] as List<dynamic>?) ?? json['benefits'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      warnings: ((json['warnings'] as List<dynamic>?) ?? json['harms'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      summary: json['summary'] as String? ?? json['score_reason'] as String? ?? '',
+      healthScore: (json['healthScore'] as num?)?.toInt() ?? (json['score'] as num?)?.toInt() ?? 50,
+      conditionAdvice: json['conditionAdvice'] as String? ?? json['condition_advice'] as String?,
+      timingAdvice: json['timingAdvice'] as String? ?? json['timing_advice'] as String?,
+      portionAdvice: json['portionAdvice'] as String? ?? json['portion_advice'] as String?,
+      alternative: json['alternative'] as String?,
+      fiber: (json['fiber'] as num?)?.toDouble(),
+      vitamins: ((json['vitamins'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
+      minerals: ((json['minerals'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
       modelId: model?['id'] as String?,
       modelName: model?['name'] as String?,
       modelVersion: model?['version'] as String?,

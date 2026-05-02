@@ -25,16 +25,28 @@ class AiBackendService {
     return _baseUrl;
   }
 
-  Future<FoodAnalysisResult> analyzeFood({
-    required XFile image,
+  Future<FoodAnalysisResult> analyzeMeal({
+    XFile? image,
+    String? description,
     required UserProfile profile,
   }) async {
-    final bytes = await image.readAsBytes();
-    final payload = {
-      'imageBase64': base64Encode(bytes),
-      'mimeType': _detectMimeType(image.path),
+    if (image == null && (description == null || description.trim().isEmpty)) {
+      throw Exception('MISSING_MEAL_INPUT');
+    }
+
+    final payload = <String, dynamic>{
       'profile': profile.toJson(),
     };
+
+    if (image != null) {
+      final bytes = await image.readAsBytes();
+      payload['imageBase64'] = base64Encode(bytes);
+      payload['mimeType'] = _detectMimeType(image.path);
+    }
+
+    if (description != null && description.trim().isNotEmpty) {
+      payload['description'] = description.trim();
+    }
 
     final uri = Uri.parse('$_resolvedBaseUrl/api/nutrition/analyze');
     final response = await http.post(

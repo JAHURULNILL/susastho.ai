@@ -11,18 +11,21 @@ class ScannerState {
     this.result,
     this.isAnalyzing = false,
     this.errorMessage,
+    this.description = '',
   });
 
   final XFile? image;
   final FoodAnalysisResult? result;
   final bool isAnalyzing;
   final String? errorMessage;
+  final String description;
 
   ScannerState copyWith({
     XFile? image,
     FoodAnalysisResult? result,
     bool? isAnalyzing,
     String? errorMessage,
+    String? description,
     bool clearResult = false,
     bool clearError = false,
   }) {
@@ -31,6 +34,7 @@ class ScannerState {
       result: clearResult ? null : result ?? this.result,
       isAnalyzing: isAnalyzing ?? this.isAnalyzing,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
+      description: description ?? this.description,
     );
   }
 }
@@ -41,12 +45,14 @@ class ScannerNotifier extends Notifier<ScannerState> {
   @override
   ScannerState build() => const ScannerState();
 
+  void updateDescription(String value) {
+    state = state.copyWith(description: value, clearError: true);
+  }
+
   Future<void> pickAndAnalyze(WidgetRef ref) async {
     final profile = ref.read(userProfileProvider).asData?.value;
     if (profile == null) {
-      state = state.copyWith(
-        errorMessage: 'প্রথমে আপনার প্রোফাইল সম্পূর্ণ করুন।',
-      );
+      state = state.copyWith(errorMessage: 'প্রথমে আপনার প্রোফাইল সম্পূর্ণ করুন।');
       return;
     }
 
@@ -62,9 +68,52 @@ class ScannerNotifier extends Notifier<ScannerState> {
       clearResult: true,
     );
 
+    await _analyze(
+      ref,
+      image: file,
+      profileDescription: state.description,
+    );
+  }
+
+  Future<void> analyzeText(WidgetRef ref) async {
+    final profile = ref.read(userProfileProvider).asData?.value;
+    if (profile == null) {
+      state = state.copyWith(errorMessage: 'প্রথমে আপনার প্রোফাইল সম্পূর্ণ করুন।');
+      return;
+    }
+    if (state.description.trim().isEmpty) {
+      state = state.copyWith(errorMessage: 'কী খেয়েছেন সেটা লিখুন।');
+      return;
+    }
+
+    state = state.copyWith(
+      isAnalyzing: true,
+      clearError: true,
+      clearResult: true,
+    );
+
+    await _analyze(
+      ref,
+      description: state.description,
+      profileDescription: state.description,
+    );
+  }
+
+  Future<void> _analyze(
+    WidgetRef ref, {
+    XFile? image,
+    String? description,
+    String? profileDescription,
+  }) async {
+    final profile = ref.read(userProfileProvider).asData?.value;
+    if (profile == null) {
+      return;
+    }
+
     try {
-      final result = await ref.read(aiBackendServiceProvider).analyzeFood(
-            image: file,
+      final result = await ref.read(aiBackendServiceProvider).analyzeMeal(
+            image: image,
+            description: description ?? profileDescription,
             profile: profile,
           );
       state = state.copyWith(
@@ -77,10 +126,10 @@ class ScannerNotifier extends Notifier<ScannerState> {
           ? 'Server URL সেট করা নেই।'
           : raw.contains('GEMINI_API_KEY')
               ? 'Gemini API key backend-এ সেট করা নেই।'
-              : raw.contains('ECONNREFUSED') || raw.contains('SocketException')
-                  ? 'Server পাওয়া যাচ্ছে না।'
-                  : raw.contains('INVALID_FUNCTION_RESPONSE')
-                      ? 'Server response ঠিক নেই।'
+              : raw.contains('MISSING_MEAL_INPUT')
+                  ? 'ছবি তুলুন অথবা কী খেয়েছেন লিখুন।'
+                  : raw.contains('ECONNREFUSED') || raw.contains('SocketException')
+                      ? 'Server পাওয়া যাচ্ছে না।'
                       : 'খাবার বিশ্লেষণ করা যায়নি। আবার চেষ্টা করুন।';
 
       state = state.copyWith(

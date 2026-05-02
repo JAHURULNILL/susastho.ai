@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/widgets/info_card.dart';
 import '../../../../core/widgets/primary_button.dart';
+import '../../../home/providers/home_provider.dart';
 import '../../providers/scanner_provider.dart';
 import '../widgets/analysis_loading_sheet.dart';
 import '../widgets/food_result_bottom_sheet.dart';
@@ -16,6 +18,20 @@ class ScannerScreen extends ConsumerStatefulWidget {
 }
 
 class _ScannerScreenState extends ConsumerState<ScannerScreen> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     ref.listen(scannerProvider, (previous, next) {
@@ -23,7 +39,10 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         showModalBottomSheet<void>(
           context: context,
           isScrollControlled: true,
-          builder: (_) => FoodResultBottomSheet(result: next.result!),
+          builder: (_) => FoodResultBottomSheet(
+            result: next.result!,
+            imagePath: next.image?.path,
+          ),
         );
       }
 
@@ -35,73 +54,159 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
     });
 
     final state = ref.watch(scannerProvider);
+    final summary = ref.watch(dailySummaryProvider).asData?.value;
+
+    if (_controller.text != state.description) {
+      _controller.value = _controller.value.copyWith(
+        text: state.description,
+        selection: TextSelection.collapsed(offset: state.description.length),
+      );
+    }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('পুষ্টি-দৃষ্টি'),
-      ),
+      appBar: AppBar(title: const Text('পুষ্টি-দৃষ্টি')),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 120),
         children: [
-          Container(
-            padding: const EdgeInsets.all(22),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF0FAF3), Color(0xFFE4F5EA)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: AppColors.border),
-            ),
+          InfoCard(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'একটি ছবি, অনেক তথ্য',
-                  style: Theme.of(context).textTheme.headlineMedium,
-                ),
+                Text('ছবি বা লেখা, দুটোই চলবে', style: Theme.of(context).textTheme.headlineSmall),
                 const SizedBox(height: 8),
                 Text(
-                  'আপনার খাবারের ছবি তুলুন। আমি সম্ভাব্য দেশীয় খাবার শনাক্ত করে ক্যালরি, ম্যাক্রো, ভালো দিক আর রোগভিত্তিক সতর্কতা দেখাব।',
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  'খাবারের ছবি তুলুন অথবা লিখে জানান কী খেয়েছেন। AI আপনার প্রোফাইল অনুযায়ী বিশ্লেষণ করবে।',
+                  style: Theme.of(context).textTheme.bodyLarge,
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: PrimaryButton(
+                        label: 'ছবি তুলুন',
+                        onPressed: state.isAnalyzing ? null : () => ref.read(scannerProvider.notifier).pickAndAnalyze(ref),
+                        icon: Icons.camera_alt_rounded,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: state.isAnalyzing ? null : () => ref.read(scannerProvider.notifier).analyzeText(ref),
+                        icon: const Icon(Icons.edit_note_rounded),
+                        label: const Text('লিখে জানান'),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _controller,
+                  minLines: 3,
+                  maxLines: 4,
+                  onChanged: (value) => ref.read(scannerProvider.notifier).updateDescription(value),
+                  decoration: const InputDecoration(
+                    hintText: 'যেমন: এক প্লেট ভাত আর ডাল খেয়েছি',
+                  ),
                 ),
               ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           if (state.image != null) ...[
             ScanPreviewCard(image: state.image!),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
-          PrimaryButton(
-            label: state.isAnalyzing ? 'বিশ্লেষণ চলছে...' : 'খাবারের ছবি তুলুন',
-            onPressed: state.isAnalyzing
-                ? null
-                : () => ref.read(scannerProvider.notifier).pickAndAnalyze(ref),
-            icon: Icons.camera_alt_rounded,
-          ),
-          const SizedBox(height: 20),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(18),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(Icons.info_outline_rounded, color: AppColors.info),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'পরিষ্কার আলোতে পুরো প্লেট বা বাটি যেন ছবিতে আসে, সেদিকে খেয়াল রাখুন।',
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                ],
-              ),
+          if (state.isAnalyzing) ...[
+            const AnalysisLoadingSheet(),
+            const SizedBox(height: 12),
+          ],
+          InfoCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('আজ আগে যা স্ক্যান করেছেন', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 110,
+                  child: summary == null || summary.meals.isEmpty
+                      ? ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: const [
+                            _TipCard(text: 'পরিষ্কার আলোতে পুরো প্লেট নিন'),
+                            SizedBox(width: 10),
+                            _TipCard(text: 'দেশীয় খাবারের নাম লিখলেও বিশ্লেষণ হবে'),
+                            SizedBox(width: 10),
+                            _TipCard(text: 'স্ক্যানের পর লগে যোগ করলে dashboard update হবে'),
+                          ],
+                        )
+                      : ListView.separated(
+                          scrollDirection: Axis.horizontal,
+                          itemBuilder: (context, index) => _RecentScanCard(
+                            title: summary.meals[index].foodName,
+                            subtitle: '${summary.meals[index].macros.calories.round()} kcal',
+                          ),
+                          separatorBuilder: (_, _) => const SizedBox(width: 10),
+                          itemCount: summary.meals.length.clamp(0, 6),
+                        ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
-          if (state.isAnalyzing) const AnalysisLoadingSheet(),
+        ],
+      ),
+    );
+  }
+}
+
+class _TipCard extends StatelessWidget {
+  const _TipCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 180,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryFaint,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
+    );
+  }
+}
+
+class _RecentScanCard extends StatelessWidget {
+  const _RecentScanCard({
+    required this.title,
+    required this.subtitle,
+  });
+
+  final String title;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 170,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 6),
+          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );

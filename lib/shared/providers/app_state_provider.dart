@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/repositories/daily_summary_repository.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/services/daily_advice_service.dart';
@@ -43,6 +44,11 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
     auth: auth,
     firestore: firestore,
   );
+});
+
+final dailySummaryRepositoryProvider = Provider<DailySummaryRepository>((ref) {
+  final storage = ref.watch(localStorageServiceProvider);
+  return DailySummaryRepository(storage);
 });
 
 final dailyAdviceServiceProvider = Provider<DailyAdviceService>((ref) {
