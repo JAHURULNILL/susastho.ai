@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "566188563265",
+    "project_id": "health-fa799",
+    "storage_bucket": "health-fa799.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:566188563265:android:7fe8bc06c808181caadfc0",
+        "android_client_info": {
+          "package_name": "com.example.sushastho_ai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCBVcLPUpABR0QpQ6u0_BzMqeDJSgfXJ5U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

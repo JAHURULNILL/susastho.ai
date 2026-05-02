@@ -1,0 +1,21 @@
+# Flutter
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+
+# Android / IDE
+*.iml
+.idea/
+.vscode/
+
+# Local env
+.env
+backend/.env
+
+# Node
+backend/node_modules/
+functions/node_modules/
+.firebase/
+firebase-debug.log

@@ -1,0 +1,115 @@
+import '../../core/utils/health_calculators.dart';
+
+enum UserGoal {
+  weightLoss,
+  weightGain,
+  maintenance,
+}
+
+enum HealthCondition {
+  diabetes,
+  heartDisease,
+  underweight,
+  obesity,
+  bellyFat,
+  ed,
+  urinaryIssues,
+}
+
+extension UserGoalX on UserGoal {
+  String get labelBn => switch (this) {
+        UserGoal.weightLoss => 'ওজন কমানো',
+        UserGoal.weightGain => 'ওজন বাড়ানো',
+        UserGoal.maintenance => 'ওজন ঠিক রাখা',
+      };
+
+  String get key => name;
+
+  static UserGoal fromKey(String value) => UserGoal.values.firstWhere(
+        (goal) => goal.name == value,
+        orElse: () => UserGoal.maintenance,
+      );
+}
+
+extension HealthConditionX on HealthCondition {
+  String get labelBn => switch (this) {
+        HealthCondition.diabetes => 'ডায়াবেটিস',
+        HealthCondition.heartDisease => 'হৃদরোগ',
+        HealthCondition.underweight => 'আন্ডারওয়েট',
+        HealthCondition.obesity => 'স্থূলতা',
+        HealthCondition.bellyFat => 'পেটের চর্বি',
+        HealthCondition.ed => 'ইডি',
+        HealthCondition.urinaryIssues => 'মূত্রজনিত সমস্যা',
+      };
+
+  String get key => name;
+
+  static HealthCondition fromKey(String value) => HealthCondition.values.firstWhere(
+        (condition) => condition.name == value,
+        orElse: () => HealthCondition.diabetes,
+      );
+}
+
+class UserProfile {
+  const UserProfile({
+    required this.name,
+    required this.age,
+    required this.weightKg,
+    required this.heightCm,
+    required this.goal,
+    required this.conditions,
+  });
+
+  final String name;
+  final int age;
+  final double weightKg;
+  final double heightCm;
+  final UserGoal goal;
+  final List<HealthCondition> conditions;
+
+  double get bmi => HealthCalculators.bmi(this);
+  int get dailyCalorieTarget => HealthCalculators.dailyCalorieTarget(this);
+  int get dailyStepTarget => HealthCalculators.dailyStepTarget(this);
+
+  UserProfile copyWith({
+    String? name,
+    int? age,
+    double? weightKg,
+    double? heightCm,
+    UserGoal? goal,
+    List<HealthCondition>? conditions,
+  }) {
+    return UserProfile(
+      name: name ?? this.name,
+      age: age ?? this.age,
+      weightKg: weightKg ?? this.weightKg,
+      heightCm: heightCm ?? this.heightCm,
+      goal: goal ?? this.goal,
+      conditions: conditions ?? this.conditions,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'age': age,
+      'weightKg': weightKg,
+      'heightCm': heightCm,
+      'goal': goal.key,
+      'conditions': conditions.map((item) => item.key).toList(),
+    };
+  }
+
+  factory UserProfile.fromJson(Map<String, dynamic> json) {
+    return UserProfile(
+      name: json['name'] as String? ?? '',
+      age: (json['age'] as num?)?.toInt() ?? 0,
+      weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0,
+      heightCm: (json['heightCm'] as num?)?.toDouble() ?? 0,
+      goal: UserGoalX.fromKey(json['goal'] as String? ?? UserGoal.maintenance.name),
+      conditions: ((json['conditions'] as List<dynamic>?) ?? [])
+          .map((item) => HealthConditionX.fromKey(item as String))
+          .toList(),
+    );
+  }
+}
