@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../data/models/food_analysis_result.dart';
 import '../../../data/services/ai_backend_service.dart';
+import '../../home/providers/home_provider.dart';
 import '../../../shared/providers/app_state_provider.dart';
 
 class ScannerState {
@@ -111,10 +112,15 @@ class ScannerNotifier extends Notifier<ScannerState> {
     }
 
     try {
+      final summary = ref.read(dailySummaryProvider).asData?.value;
+      final consumed = summary?.consumedMacros.calories.round();
+      final remaining = profile.dailyCalorieTarget - (consumed ?? 0);
       final result = await ref.read(aiBackendServiceProvider).analyzeMeal(
             image: image,
             description: description ?? profileDescription,
             profile: profile,
+            consumedCalories: consumed,
+            remainingCalories: remaining,
           );
       state = state.copyWith(
         result: result,

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../data/models/app_settings.dart';
 import '../../../data/models/daily_summary.dart';
 import '../../../data/models/food_analysis_result.dart';
 import '../../../data/services/daily_advice_service.dart';
@@ -61,6 +62,7 @@ final dailySummaryProvider = AsyncNotifierProvider<DailySummaryNotifier, DailySu
 final homeDashboardProvider = Provider<HomeDashboardData?>((ref) {
   final profile = ref.watch(userProfileProvider).asData?.value;
   final summary = ref.watch(dailySummaryProvider).asData?.value;
+  final settings = ref.watch(appSettingsProvider).asData?.value ?? const AppSettings();
   final now = ref.watch(clockProvider).asData?.value ?? DateTime.now();
   if (profile == null || summary == null) {
     return null;
@@ -71,7 +73,7 @@ final homeDashboardProvider = Provider<HomeDashboardData?>((ref) {
         summary: summary,
         now: now,
       );
-  final targetCalories = profile.dailyCalorieTarget.toDouble();
+  final targetCalories = (settings.customCalorieGoal ?? profile.dailyCalorieTarget).toDouble();
 
   return HomeDashboardData(
     advice: advice,

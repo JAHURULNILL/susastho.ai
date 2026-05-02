@@ -1,14 +1,18 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../data/models/app_settings.dart';
 import '../../data/repositories/daily_summary_repository.dart';
 import '../../data/models/user_profile.dart';
+import '../../data/repositories/app_settings_repository.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/services/daily_advice_service.dart';
 import '../../data/services/local_storage_service.dart';
+import '../../data/services/notification_service.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>((ref) {
   return SharedPreferencesAsync();
@@ -51,6 +55,20 @@ final dailySummaryRepositoryProvider = Provider<DailySummaryRepository>((ref) {
   return DailySummaryRepository(storage);
 });
 
+final appSettingsRepositoryProvider = Provider<AppSettingsRepository>((ref) {
+  final storage = ref.watch(localStorageServiceProvider);
+  return AppSettingsRepository(storage);
+});
+
+final notificationPluginProvider = Provider<FlutterLocalNotificationsPlugin>((ref) {
+  return FlutterLocalNotificationsPlugin();
+});
+
+final notificationServiceProvider = Provider<NotificationService>((ref) {
+  final plugin = ref.watch(notificationPluginProvider);
+  return NotificationService(plugin);
+});
+
 final dailyAdviceServiceProvider = Provider<DailyAdviceService>((ref) {
   return const DailyAdviceService();
 });
@@ -79,4 +97,26 @@ class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
 
 final userProfileProvider = AsyncNotifierProvider<UserProfileNotifier, UserProfile?>(
   UserProfileNotifier.new,
+);
+
+class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
+  @override
+  Future<AppSettings> build() async {
+    final repository = ref.read(appSettingsRepositoryProvider);
+    return repository.load();
+  }
+
+  Future<void> save(AppSettings settings) async {
+    state = AsyncData(settings);
+    await ref.read(appSettingsRepositoryProvider).save(settings);
+    if (settings.notificationsEnabled) {
+      await ref.read(notificationServiceProvider).scheduleDailyReminders();
+    } else {
+      await ref.read(notificationServiceProvider).cancelAll();
+    }
+  }
+}
+
+final appSettingsProvider = AsyncNotifierProvider<AppSettingsNotifier, AppSettings>(
+  AppSettingsNotifier.new,
 );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/utils/bengali_formatters.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../data/models/user_profile.dart';
 import '../../providers/onboarding_provider.dart';
@@ -71,37 +72,13 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: const Icon(Icons.auto_awesome_rounded, color: AppColors.primaryDark),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'স্বাস্থ্য শুরু হোক নিজের ভাষায়',
-                                style: Theme.of(context).textTheme.titleLarge,
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'কয়েকটি ছোট উত্তর দিলেই আমি আপনার খাবার, স্ক্যান আর পরামর্শ ব্যক্তিগতভাবে সাজিয়ে দেব।',
-                                style: Theme.of(context).textTheme.bodyMedium,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    Text('স্বাস্থ্য শুরু হোক নিজের ভাষায়', style: Theme.of(context).textTheme.titleLarge),
+                    const SizedBox(height: 8),
+                    Text(
+                      'কয়েকটি ছোট উত্তর দিলেই আমি আপনার খাবার, স্ক্যান আর পরামর্শ ব্যক্তিগতভাবে সাজিয়ে দেব।',
+                      style: Theme.of(context).textTheme.bodyMedium,
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 14),
                     ClipRRect(
                       borderRadius: BorderRadius.circular(99),
                       child: LinearProgressIndicator(
@@ -162,12 +139,8 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
       case OnboardingStep.conditions:
         return _ConditionSelector(
           state: state,
-          onToggle: (condition) {
-            ref.read(onboardingProvider.notifier).toggleCondition(condition);
-          },
-          onContinue: () async {
-            await ref.read(onboardingProvider.notifier).finish(ref);
-          },
+          onToggle: (condition) => ref.read(onboardingProvider.notifier).toggleCondition(condition),
+          onContinue: () async => ref.read(onboardingProvider.notifier).finish(ref),
         );
       case OnboardingStep.complete:
         return const SizedBox(height: 16);
@@ -176,12 +149,7 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
       case OnboardingStep.weight:
       case OnboardingStep.height:
         return Container(
-          padding: EdgeInsets.fromLTRB(
-            16,
-            10,
-            16,
-            16 + MediaQuery.viewInsetsOf(context).bottom,
-          ),
+          padding: EdgeInsets.fromLTRB(16, 10, 16, 16 + MediaQuery.viewInsetsOf(context).bottom),
           decoration: const BoxDecoration(
             color: Colors.white,
             border: Border(top: BorderSide(color: AppColors.border)),
@@ -196,9 +164,7 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
                       : const TextInputType.numberWithOptions(decimal: true),
                   textInputAction: TextInputAction.done,
                   onSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(
-                    hintText: _hintFor(state.step),
-                  ),
+                  decoration: InputDecoration(hintText: _hintFor(state.step)),
                 ),
               ),
               const SizedBox(width: 12),
@@ -215,9 +181,9 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
   String _hintFor(OnboardingStep step) {
     return switch (step) {
       OnboardingStep.name => 'আপনার নাম লিখুন',
-      OnboardingStep.age => 'যেমন ২৬',
+      OnboardingStep.age => 'যেমন ২৪',
       OnboardingStep.weight => 'যেমন ৬৫',
-      OnboardingStep.height => 'যেমন ১৬৮',
+      OnboardingStep.height => 'যেমন ১৭৬',
       _ => 'এখানে লিখুন',
     };
   }
@@ -289,6 +255,8 @@ class _ConditionSelector extends StatelessWidget {
                 .toList(),
           ),
           const SizedBox(height: 16),
+          _ProfilePreviewCard(state: state),
+          const SizedBox(height: 16),
           PrimaryButton(
             label: state.isSaving ? 'প্রোফাইল সংরক্ষণ হচ্ছে...' : 'ড্যাশবোর্ডে চলুন',
             onPressed: state.isSaving ? null : () => onContinue(),
@@ -297,5 +265,67 @@ class _ConditionSelector extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _ProfilePreviewCard extends StatelessWidget {
+  const _ProfilePreviewCard({required this.state});
+
+  final OnboardingState state;
+
+  @override
+  Widget build(BuildContext context) {
+    if (state.name == null ||
+        state.age == null ||
+        state.weightKg == null ||
+        state.heightCm == null ||
+        state.goal == null) {
+      return const SizedBox.shrink();
+    }
+
+    final bmi = state.weightKg! / ((state.heightCm! / 100) * (state.heightCm! / 100));
+    final target = _dailyTarget();
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryFaint,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('✓ নাম: ${state.name}'),
+          Text(
+            '✓ বয়স: ${BengaliFormatters.toBengaliNumber(state.age!)} বছর, ওজন: ${BengaliFormatters.toBengaliNumber(state.weightKg!, fractionDigits: 0)}kg, উচ্চতা: ${BengaliFormatters.toBengaliNumber(state.heightCm!, fractionDigits: 0)}cm',
+          ),
+          Text('✓ BMI: ${BengaliFormatters.toBengaliNumber(bmi, fractionDigits: 1)} (${_bmiLabel(bmi)})'),
+          Text('✓ লক্ষ্য: ${state.goal!.labelBn}'),
+          Text(
+            '✓ সমস্যা: ${state.conditions.isEmpty ? 'এখনো নির্বাচন করেননি' : state.conditions.map((item) => item.labelBn).join(', ')}',
+          ),
+          Text(
+            'দৈনিক ক্যালরি লক্ষ্য: ${BengaliFormatters.toBengaliNumber(target)} kcal',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ],
+      ),
+    );
+  }
+
+  int _dailyTarget() {
+    final base = (10 * state.weightKg!) + (6.25 * state.heightCm!) - (5 * state.age!) + 5;
+    return switch (state.goal!) {
+      UserGoal.weightLoss => (base - 250).round(),
+      UserGoal.weightGain => (base + 250).round(),
+      UserGoal.maintenance => base.round(),
+    };
+  }
+
+  String _bmiLabel(double bmi) {
+    if (bmi < 18.5) return 'কম';
+    if (bmi < 25) return 'স্বাভাবিক';
+    return 'বেশি';
   }
 }

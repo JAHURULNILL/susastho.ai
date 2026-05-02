@@ -15,7 +15,7 @@ module.exports = async function handler(req, res) {
   const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   try {
-    const { imageBase64, mimeType, profile, description } = req.body ?? {};
+    const { imageBase64, mimeType, profile, description, consumedCalories, remainingCalories } = req.body ?? {};
     if ((!imageBase64 || !mimeType) && !description) {
       return res.status(400).json({ error: 'imageBase64/mimeType অথবা description প্রয়োজন।' });
     }
@@ -28,7 +28,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is missing on backend.' });
     }
 
-    const prompt = buildNutritionPrompt(profile, description);
+    const prompt = buildNutritionPrompt(profile, description, consumedCalories, remainingCalories);
     const contentParts = [{ text: prompt }];
 
     if (imageBase64 && mimeType) {
@@ -85,7 +85,7 @@ module.exports = async function handler(req, res) {
   }
 };
 
-function buildNutritionPrompt(profile, description) {
+function buildNutritionPrompt(profile, description, consumedCalories, remainingCalories) {
   const conditions = Array.isArray(profile.conditions) && profile.conditions.length > 0
     ? profile.conditions.join(', ')
     : 'কোনো নির্দিষ্ট রোগ উল্লেখ নেই';
@@ -99,6 +99,8 @@ function buildNutritionPrompt(profile, description) {
 - উচ্চতা: ${profile.heightCm}cm
 - স্বাস্থ্য সমস্যা: ${conditions}
 - দৈনিক লক্ষ্য: ${profile.goal}
+- এখন পর্যন্ত খেয়েছে: ${consumedCalories ?? 0} kcal
+- বাকি আছে: ${remainingCalories ?? 'অজানা'} kcal
 
 ${description ? `ইউজার লিখেছে: "${description}"` : 'ছবিতে দেখা খাবার বিশ্লেষণ করো।'}
 
@@ -119,7 +121,8 @@ ${description ? `ইউজার লিখেছে: "${description}"` : 'ছব
   "condition_advice": "ইউজারের সমস্যার জন্য নির্দিষ্ট পরামর্শ",
   "timing_advice": "দিনের কোন সময়ে ভালো",
   "portion_advice": "কতটুকু খাওয়া উচিত",
-  "alternative": "আরও স্বাস্থ্যকর দেশীয় বিকল্প"
+  "alternative": "আরও স্বাস্থ্যকর দেশীয় বিকল্প",
+  "remaining_after": 0
 }
 `;
 }

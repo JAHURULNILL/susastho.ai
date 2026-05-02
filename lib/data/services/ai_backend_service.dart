@@ -29,6 +29,8 @@ class AiBackendService {
     XFile? image,
     String? description,
     required UserProfile profile,
+    int? consumedCalories,
+    int? remainingCalories,
   }) async {
     if (image == null && (description == null || description.trim().isEmpty)) {
       throw Exception('MISSING_MEAL_INPUT');
@@ -36,6 +38,8 @@ class AiBackendService {
 
     final payload = <String, dynamic>{
       'profile': profile.toJson(),
+      'consumedCalories': consumedCalories,
+      'remainingCalories': remainingCalories,
     };
 
     if (image != null) {
