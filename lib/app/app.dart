@@ -73,7 +73,7 @@ class _ConfigurationErrorScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'App চালাতে Firebase config দরকার। Build/run এর সময় Firebase env define দিতে হবে।',
+                'App চালাতে Firebase setup দরকার। Android-এ google-services.json আর Gradle Firebase plugin ঠিকমতো থাকতে হবে।',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodyLarge,
               ),

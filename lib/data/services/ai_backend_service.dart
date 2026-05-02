@@ -1,8 +1,7 @@
 import 'dart:convert';
 
-import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/constants/app_strings.dart';
@@ -14,26 +13,16 @@ final aiBackendServiceProvider = Provider<AiBackendService>((ref) {
 });
 
 class AiBackendService {
-  AiBackendService({
-    FirebaseFunctions? functions,
-  }) : _functions = functions ??
-            (Firebase.apps.isEmpty
-                ? null
-                : FirebaseFunctions.instanceFor(
-                    region: const String.fromEnvironment(
-                      AppStrings.firebaseFunctionsRegionEnv,
-                      defaultValue: 'asia-south1',
-                    ),
-                  ));
+  AiBackendService({String? baseUrl})
+      : _baseUrl = (baseUrl ?? const String.fromEnvironment(AppStrings.backendBaseUrlEnv)).trim();
 
-  final FirebaseFunctions? _functions;
+  final String _baseUrl;
 
-  FirebaseFunctions get _resolvedFunctions {
-    final functions = _functions;
-    if (functions == null) {
-      throw Exception('FIREBASE_NOT_INITIALIZED');
+  String get _resolvedBaseUrl {
+    if (_baseUrl.isEmpty) {
+      throw Exception('BACKEND_BASE_URL is missing');
     }
-    return functions;
+    return _baseUrl;
   }
 
   Future<FoodAnalysisResult> analyzeFood({
@@ -47,9 +36,18 @@ class AiBackendService {
       'profile': profile.toJson(),
     };
 
-    final callable = _resolvedFunctions.httpsCallable('analyzeFood');
-    final response = await callable.call<Map<String, dynamic>>(payload);
-    final decoded = Map<String, dynamic>.from(response.data);
+    final uri = Uri.parse('$_resolvedBaseUrl/api/nutrition/analyze');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(response.body);
+    }
+
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     final analysis = Map<String, dynamic>.from(decoded['analysis'] as Map<String, dynamic>);
     final model = decoded['model'];
     if (model is Map<String, dynamic>) {

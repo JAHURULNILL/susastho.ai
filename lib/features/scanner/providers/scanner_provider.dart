@@ -73,17 +73,15 @@ class ScannerNotifier extends Notifier<ScannerState> {
       );
     } catch (error) {
       final raw = error.toString();
-      final message = raw.contains('FIREBASE_NOT_INITIALIZED')
-          ? 'Firebase setup complete হয়নি।'
-          : raw.contains('unauthenticated')
-              ? 'User session পাওয়া যায়নি। আবার app খুলুন।'
-              : raw.contains('permission-denied')
-                  ? 'এই request এখন অনুমোদিত নয়।'
-                  : raw.contains('internal')
-                      ? 'Gemini analysis এখন পাওয়া যায়নি। একটু পরে আবার চেষ্টা করুন।'
-                      : raw.contains('network-request-failed') || raw.contains('SocketException')
-                          ? 'ইন্টারনেট বা cloud connection পাওয়া যাচ্ছে না।'
-                          : 'খাবার বিশ্লেষণ করা যায়নি। আবার চেষ্টা করুন।';
+      final message = raw.contains('BACKEND_BASE_URL')
+          ? 'Server URL সেট করা নেই।'
+          : raw.contains('GEMINI_API_KEY')
+              ? 'Gemini API key backend-এ সেট করা নেই।'
+              : raw.contains('ECONNREFUSED') || raw.contains('SocketException')
+                  ? 'Server পাওয়া যাচ্ছে না।'
+                  : raw.contains('INVALID_FUNCTION_RESPONSE')
+                      ? 'Server response ঠিক নেই।'
+                      : 'খাবার বিশ্লেষণ করা যায়নি। আবার চেষ্টা করুন।';
 
       state = state.copyWith(
         isAnalyzing: false,
