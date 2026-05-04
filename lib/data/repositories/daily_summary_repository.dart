@@ -5,16 +5,20 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/daily_summary.dart';
 import '../models/food_analysis_result.dart';
+import '../services/local_storage_service.dart';
 
 class DailySummaryRepository {
   DailySummaryRepository({
     required FirebaseAuth? auth,
     required FirebaseFirestore? firestore,
+    required LocalStorageService storage,
   })  : _auth = auth,
-        _firestore = firestore;
+        _firestore = firestore,
+        _storage = storage;
 
   final FirebaseAuth? _auth;
   final FirebaseFirestore? _firestore;
+  final LocalStorageService _storage;
 
   String get todayKey => _formatDate(DateTime.now());
 
@@ -30,32 +34,64 @@ class DailySummaryRepository {
   CollectionReference<Map<String, dynamic>>? get _foodLogsRef => _userRef?.collection('food_logs');
   CollectionReference<Map<String, dynamic>>? get _waterLogsRef => _userRef?.collection('water_logs');
 
-  Stream<List<MealLogEntry>> watchTodayMeals() {
-    final ref = _foodLogsRef;
-    if (ref == null) {
-      return Stream.value(const []);
+  String? get _uid => _auth?.currentUser?.uid;
+  String? get _mealsCacheKey => _uid == null ? null : 'today_meals_${_uid!}_$todayKey';
+  String? get _waterCacheKey => _uid == null ? null : 'today_water_${_uid!}_$todayKey';
+  String? get _weeklyCaloriesCacheKey => _uid == null ? null : 'weekly_calories_${_uid!}_${_formatDate(_startOfWeek(DateTime.now()))}';
+  String? get _weeklyWaterCacheKey => _uid == null ? null : 'weekly_water_${_uid!}_${_formatDate(_startOfWeek(DateTime.now()))}';
+
+  Stream<List<MealLogEntry>> watchTodayMeals() async* {
+    final cacheKey = _mealsCacheKey;
+    if (cacheKey != null) {
+      final cached = await _storage.readJsonList(cacheKey);
+      if (cached.isNotEmpty) {
+        yield cached.map((item) => MealLogEntry.fromJson(item)).toList();
+      }
     }
 
-    return ref
+    final ref = _foodLogsRef;
+    if (ref == null) {
+      yield const [];
+      return;
+    }
+
+    yield* ref
         .where('date', isEqualTo: todayKey)
         .orderBy('loggedAt', descending: true)
         .snapshots()
-        .map(
-          (snapshot) => snapshot.docs
-              .map((doc) => MealLogEntry.fromFirestore(doc.id, doc.data()))
-              .toList(),
-        );
+        .asyncMap((snapshot) async {
+      final items = snapshot.docs
+          .map((doc) => MealLogEntry.fromFirestore(doc.id, doc.data()))
+          .toList();
+      if (cacheKey != null) {
+        await _storage.saveJsonList(cacheKey, items.map((item) => item.toJson()).toList());
+      }
+      return items;
+    });
   }
 
-  Stream<int> watchTodayWater() {
-    final ref = _waterLogsRef?.doc(todayKey);
-    if (ref == null) {
-      return Stream.value(0);
+  Stream<int> watchTodayWater() async* {
+    final cacheKey = _waterCacheKey;
+    if (cacheKey != null) {
+      final cached = await _storage.readJson(cacheKey);
+      if (cached != null) {
+        yield (cached['glasses'] as num?)?.toInt() ?? 0;
+      }
     }
 
-    return ref.snapshots().map((snapshot) {
+    final ref = _waterLogsRef?.doc(todayKey);
+    if (ref == null) {
+      yield 0;
+      return;
+    }
+
+    yield* ref.snapshots().asyncMap((snapshot) async {
       final data = snapshot.data();
-      return (data?['glasses'] as num?)?.toInt() ?? 0;
+      final glasses = (data?['glasses'] as num?)?.toInt() ?? 0;
+      if (cacheKey != null) {
+        await _storage.saveJson(cacheKey, {'glasses': glasses});
+      }
+      return glasses;
     });
   }
 
@@ -102,6 +138,14 @@ class DailySummaryRepository {
   }
 
   Future<Map<String, double>> loadCurrentWeekCalories() async {
+    final cacheKey = _weeklyCaloriesCacheKey;
+    if (cacheKey != null) {
+      final cached = await _storage.readJson(cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        return cached.map((key, value) => MapEntry(key, (value as num).toDouble()));
+      }
+    }
+
     final ref = _foodLogsRef;
     if (ref == null) {
       return const {};
@@ -125,7 +169,87 @@ class DailySummaryRepository {
           0;
       byDate.update(date, (value) => value + calories, ifAbsent: () => calories);
     }
+    if (cacheKey != null) {
+      await _storage.saveJson(cacheKey, byDate);
+    }
     return byDate;
+  }
+
+  Future<Map<String, int>> loadCurrentWeekWater() async {
+    final cacheKey = _weeklyWaterCacheKey;
+    if (cacheKey != null) {
+      final cached = await _storage.readJson(cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        return cached.map((key, value) => MapEntry(key, (value as num).toInt()));
+      }
+    }
+
+    final ref = _waterLogsRef;
+    if (ref == null) {
+      return const {};
+    }
+
+    final start = _startOfWeek(DateTime.now());
+    final end = start.add(const Duration(days: 6));
+    final snapshot = await ref
+        .where('date', isGreaterThanOrEqualTo: _formatDate(start))
+        .where('date', isLessThanOrEqualTo: _formatDate(end))
+        .get();
+
+    final byDate = <String, int>{};
+    for (final doc in snapshot.docs) {
+      final data = doc.data();
+      final date = data['date'] as String? ?? '';
+      final glasses = (data['glasses'] as num?)?.toInt() ?? 0;
+      byDate[date] = glasses;
+    }
+    if (cacheKey != null) {
+      await _storage.saveJson(cacheKey, byDate);
+    }
+    return byDate;
+  }
+
+  Future<List<Map<String, dynamic>>> loadRecentMeals({int days = 3, int limit = 8}) async {
+    final ref = _foodLogsRef;
+    if (ref == null) {
+      return const [];
+    }
+
+    final start = DateTime.now().subtract(Duration(days: days - 1));
+    final snapshot = await ref
+        .where('date', isGreaterThanOrEqualTo: _formatDate(start))
+        .orderBy('date', descending: true)
+        .orderBy('loggedAt', descending: true)
+        .limit(limit)
+        .get();
+
+    return snapshot.docs
+        .map((doc) => {
+              'foodName': doc.data()['foodName'],
+              'date': doc.data()['date'],
+              'slot': doc.data()['slot'],
+              'calories': ((doc.data()['macros'] as Map?)?['calories'] as num?)?.toDouble() ?? 0,
+              'protein': ((doc.data()['macros'] as Map?)?['protein'] as num?)?.toDouble() ?? 0,
+              'carbs': ((doc.data()['macros'] as Map?)?['carbs'] as num?)?.toDouble() ?? 0,
+              'fat': ((doc.data()['macros'] as Map?)?['fat'] as num?)?.toDouble() ?? 0,
+            })
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> loadHistoricalContext() async {
+    final weeklyCalories = await loadCurrentWeekCalories();
+    final recentMeals = await loadRecentMeals();
+    final avgCalories = weeklyCalories.values.where((value) => value > 0).isEmpty
+        ? 0
+        : weeklyCalories.values.where((value) => value > 0).reduce((a, b) => a + b) /
+            weeklyCalories.values.where((value) => value > 0).length;
+
+    return {
+      'recentMeals': recentMeals,
+      'weeklyCalories': weeklyCalories,
+      'weeklyWater': await loadCurrentWeekWater(),
+      'averageCalories': avgCalories.round(),
+    };
   }
 
   String _formatDate(DateTime date) {

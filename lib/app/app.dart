@@ -5,6 +5,7 @@ import '../core/theme/app_theme.dart';
 import '../features/home/presentation/screens/home_shell.dart';
 import '../features/onboarding/presentation/screens/onboarding_chat_screen.dart';
 import '../shared/providers/app_state_provider.dart';
+import '../data/models/app_settings.dart';
 
 class SushasthoApp extends ConsumerWidget {
   const SushasthoApp({
@@ -26,11 +27,18 @@ class SushasthoApp extends ConsumerWidget {
     }
 
     final profileState = ref.watch(userProfileProvider);
+    final settings = ref.watch(appSettingsProvider).asData?.value ?? const AppSettings();
 
     return MaterialApp(
       title: 'Sushastho.ai',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: switch (settings.themeMode) {
+        AppThemeModePreference.system => ThemeMode.system,
+        AppThemeModePreference.light => ThemeMode.light,
+        AppThemeModePreference.dark => ThemeMode.dark,
+      },
       home: profileState.when(
         data: (profile) => profile == null ? const OnboardingChatScreen() : const HomeShell(),
         loading: () => const _SplashScreen(),
@@ -102,39 +110,78 @@ class _SplashScreen extends StatelessWidget {
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
               Color(0xFFF4FBF6),
+              Color(0xFFF7FCF8),
               Colors.white,
             ],
           ),
         ),
-        child: const Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircleAvatar(
-                radius: 34,
-                backgroundColor: Color(0xFFEAF8F0),
-                child: Icon(
-                  Icons.favorite_rounded,
-                  size: 34,
-                  color: Color(0xFF3D9B67),
+        child: Center(
+          child: TweenAnimationBuilder<double>(
+            duration: const Duration(milliseconds: 700),
+            tween: Tween(begin: 0.94, end: 1),
+            curve: Curves.easeOutCubic,
+            builder: (context, value, child) {
+              return Transform.scale(scale: value, child: child);
+            },
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 88,
+                  height: 88,
+                  decoration: const BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      colors: [Color(0xFFEAF8F0), Color(0xFFD8F3DC)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color.fromRGBO(45, 106, 79, 0.14),
+                        blurRadius: 24,
+                        spreadRadius: -4,
+                        offset: Offset(0, 12),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.favorite_rounded,
+                    size: 38,
+                    color: Color(0xFF2D8A5B),
+                  ),
                 ),
-              ),
-              SizedBox(height: 16),
-              Text(
-                'Sushastho.ai',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: Color(0xFF163020),
+                const SizedBox(height: 18),
+                const Text(
+                  'Sushastho.ai',
+                  style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.w800,
+                    color: Color(0xFF163020),
+                    letterSpacing: -0.4,
+                  ),
                 ),
-              ),
-              SizedBox(height: 12),
-              CircularProgressIndicator(),
-            ],
+                const SizedBox(height: 8),
+                const Text(
+                  'ব্যক্তিগত স্বাস্থ্য সহচর',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF6A8D78),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2.4),
+                ),
+              ],
+            ),
           ),
         ),
       ),

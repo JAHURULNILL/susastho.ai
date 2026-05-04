@@ -6,6 +6,7 @@ import '../../../shared/providers/app_state_provider.dart';
 
 enum OnboardingStep {
   name,
+  gender,
   age,
   weight,
   height,
@@ -19,6 +20,7 @@ class OnboardingState {
     required this.messages,
     required this.step,
     this.name,
+    this.gender,
     this.age,
     this.weightKg,
     this.heightCm,
@@ -30,6 +32,7 @@ class OnboardingState {
   final List<ChatMessage> messages;
   final OnboardingStep step;
   final String? name;
+  final UserGender? gender;
   final int? age;
   final double? weightKg;
   final double? heightCm;
@@ -37,10 +40,19 @@ class OnboardingState {
   final List<HealthCondition> conditions;
   final bool isSaving;
 
+  List<HealthCondition> get availableConditions {
+    final gender = this.gender;
+    if (gender == null) {
+      return HealthCondition.values;
+    }
+    return HealthCondition.values.where((item) => item.isVisibleFor(gender)).toList();
+  }
+
   OnboardingState copyWith({
     List<ChatMessage>? messages,
     OnboardingStep? step,
     String? name,
+    UserGender? gender,
     int? age,
     double? weightKg,
     double? heightCm,
@@ -52,6 +64,7 @@ class OnboardingState {
       messages: messages ?? this.messages,
       step: step ?? this.step,
       name: name ?? this.name,
+      gender: gender ?? this.gender,
       age: age ?? this.age,
       weightKg: weightKg ?? this.weightKg,
       heightCm: heightCm ?? this.heightCm,
@@ -65,7 +78,7 @@ class OnboardingState {
     return const OnboardingState(
       messages: [
         ChatMessage(
-          text: 'আসসালামু আলাইকুম। আমি Sushastho.ai। আপনার জন্য একদম ব্যক্তিগত স্বাস্থ্য সঙ্গী হতে চাই। প্রথমে আপনার নামটা বলুন।',
+          text: 'আসসালামু আলাইকুম। আমি Sushastho.ai। প্রথমে আপনার নামটা বলুন।',
           sender: ChatSender.ai,
         ),
       ],
@@ -90,11 +103,11 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
       case OnboardingStep.name:
         state = state.copyWith(
           name: input,
-          step: OnboardingStep.age,
+          step: OnboardingStep.gender,
           messages: [
             ...nextMessages,
             ChatMessage(
-              text: 'ধন্যবাদ $input। এখন আপনার বয়স কত?',
+              text: 'ধন্যবাদ $input। এখন আপনার লিঙ্গ নির্বাচন করুন।',
               sender: ChatSender.ai,
             ),
           ],
@@ -139,7 +152,7 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
       case OnboardingStep.height:
         final height = double.tryParse(input);
         if (height == null) {
-          _appendAiMessage(nextMessages, 'উচ্চতা সংখ্যায় লিখুন, যেমন ১৬৮।');
+          _appendAiMessage(nextMessages, 'উচ্চতা সংখ্যায় লিখুন, যেমন ১৭৭।');
           return;
         }
         state = state.copyWith(
@@ -154,11 +167,34 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
           ],
         );
         return;
+      case OnboardingStep.gender:
       case OnboardingStep.goal:
       case OnboardingStep.conditions:
       case OnboardingStep.complete:
         return;
     }
+  }
+
+  void selectGender(UserGender gender) {
+    if (state.step != OnboardingStep.gender) {
+      return;
+    }
+
+    final nextMessages = [
+      ...state.messages,
+      ChatMessage(text: gender.labelBn, sender: ChatSender.user),
+      const ChatMessage(
+        text: 'এখন আপনার বয়স কত?',
+        sender: ChatSender.ai,
+      ),
+    ];
+
+    state = state.copyWith(
+      gender: gender,
+      conditions: state.conditions.where((item) => item.isVisibleFor(gender)).toList(),
+      step: OnboardingStep.age,
+      messages: nextMessages,
+    );
   }
 
   void selectGoal(UserGoal goal) {
@@ -200,6 +236,7 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
   Future<void> finish(WidgetRef ref) async {
     if (state.isSaving ||
         state.name == null ||
+        state.gender == null ||
         state.age == null ||
         state.weightKg == null ||
         state.heightCm == null ||
@@ -211,6 +248,7 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
 
     final profile = UserProfile(
       name: state.name!,
+      gender: state.gender!,
       age: state.age!,
       weightKg: state.weightKg!,
       heightCm: state.heightCm!,

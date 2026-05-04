@@ -74,8 +74,30 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
             Text('পুষ্টি-দৃষ্টি', style: AppTextStyles.screenTitle),
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'খাবারের ছবি তুলুন অথবা লিখে জানান। AI আপনার বাস্তব প্রোফাইল আর আজকের লগ অনুযায়ী বিশ্লেষণ করবে।',
+              'খাবার, রেস্টুরেন্টের মেনু, বা বাজারের রসিদ — যেটা দেখাবেন, সেটার ভিত্তিতে AI আপনাকে ব্যক্তিগত সিদ্ধান্ত নিতে সাহায্য করবে।',
               style: AppTextStyles.body,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _ModeChip(
+                  label: 'খাবার',
+                  selected: state.mode == ScanInputMode.meal,
+                  onTap: () => ref.read(scannerProvider.notifier).setMode(ScanInputMode.meal),
+                ),
+                _ModeChip(
+                  label: 'মেনু',
+                  selected: state.mode == ScanInputMode.menu,
+                  onTap: () => ref.read(scannerProvider.notifier).setMode(ScanInputMode.menu),
+                ),
+                _ModeChip(
+                  label: 'রসিদ',
+                  selected: state.mode == ScanInputMode.receipt,
+                  onTap: () => ref.read(scannerProvider.notifier).setMode(ScanInputMode.receipt),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.md),
             Row(
@@ -110,8 +132,12 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   minLines: 4,
                   maxLines: 5,
                   onChanged: (value) => ref.read(scannerProvider.notifier).updateDescription(value),
-                  decoration: const InputDecoration(
-                    hintText: 'যেমন: এক প্লেট ভাত আর ডাল খেয়েছি',
+                  decoration: InputDecoration(
+                    hintText: switch (state.mode) {
+                      ScanInputMode.meal => 'যেমন: এক প্লেট পান্তা ভাত আর হাঁসের ডিম খেয়েছি',
+                      ScanInputMode.menu => 'যেমন: এই মেনু থেকে আমার জন্য ভালো ২টা item বলুন',
+                      ScanInputMode.receipt => 'যেমন: এই সপ্তাহের বাজার কতটা স্বাস্থ্যকর?',
+                    },
                   ),
                 ),
                 Padding(
@@ -140,7 +166,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('আজ আগে যা স্ক্যান করেছেন', style: AppTextStyles.cardTitle),
+            Text('আজ আগে যা লগ বা স্ক্যান করেছেন', style: AppTextStyles.cardTitle),
             const SizedBox(height: AppSpacing.md),
             SizedBox(
               height: 96,
@@ -182,6 +208,41 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   }
 }
 
+class _ModeChip extends StatelessWidget {
+  const _ModeChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primaryPale : AppColors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: selected ? AppColors.primary : AppColors.border),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.caption.copyWith(
+            color: selected ? AppColors.primary : AppColors.textSecondary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _RecentScanCard extends StatelessWidget {
   const _RecentScanCard({required this.meal});
 
@@ -198,6 +259,19 @@ class _RecentScanCard extends StatelessWidget {
         color: AppColors.white,
         border: Border.all(color: AppColors.border),
         borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(15, 38, 27, 0.04),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color.fromRGBO(45, 106, 79, 0.08),
+            blurRadius: 20,
+            spreadRadius: -8,
+            offset: Offset(0, 10),
+          ),
+        ],
       ),
       child: Row(
         children: [

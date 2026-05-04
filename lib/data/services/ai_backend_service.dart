@@ -32,6 +32,9 @@ class AiBackendService {
     required UserProfile profile,
     int? consumedCalories,
     int? remainingCalories,
+    String mode = 'meal',
+    List<Map<String, dynamic>> recentMeals = const [],
+    Map<String, dynamic>? healthContext,
   }) async {
     if (image == null && (description == null || description.trim().isEmpty)) {
       throw Exception('MISSING_MEAL_INPUT');
@@ -41,6 +44,9 @@ class AiBackendService {
       'profile': profile.toJson(),
       'consumedCalories': consumedCalories,
       'remainingCalories': remainingCalories,
+      'mode': mode,
+      'recentMeals': recentMeals,
+      'healthContext': healthContext,
     };
 
     if (image != null) {
@@ -78,6 +84,7 @@ class AiBackendService {
     required dynamic summary,
     required List<WeeklyExerciseItem> exercises,
     required List<String> recentCategories,
+    Map<String, dynamic>? historicalContext,
   }) async {
     final completedExercises = exercises.where((item) => item.completed).toList();
     final payload = <String, dynamic>{
@@ -93,6 +100,7 @@ class AiBackendService {
         'burnedCal': completedExercises.fold<double>(0, (sum, item) => sum + item.caloriesBurned),
         'remainCal': profile.dailyCalorieTarget - summary.consumedMacros.calories.round(),
       },
+      'historicalContext': historicalContext,
     };
 
     final decoded = await _post('/api/doctor-note', payload);
@@ -105,8 +113,12 @@ class AiBackendService {
 
   Future<List<WeeklyExerciseItem>> generateExercisePlan({
     required UserProfile profile,
+    Map<String, dynamic>? historicalContext,
   }) async {
-    final decoded = await _post('/api/exercise-plan', {'profile': profile.toJson()});
+    final decoded = await _post('/api/exercise-plan', {
+      'profile': profile.toJson(),
+      'historicalContext': historicalContext,
+    });
     final items = (decoded['items'] as List<dynamic>? ?? const []);
     return items
         .map((item) => WeeklyExerciseItem.fromJson('', Map<String, dynamic>.from(item as Map)))
@@ -116,12 +128,14 @@ class AiBackendService {
   Future<WeeklyMealPlan> generateMealPlan({
     required UserProfile profile,
     required String weekOf,
+    Map<String, dynamic>? historicalContext,
   }) async {
     final decoded = await _post(
       '/api/meal-plan',
       {
         'profile': profile.toJson(),
         'weekOf': weekOf,
+        'historicalContext': historicalContext,
       },
     );
     return WeeklyMealPlan.fromJson(Map<String, dynamic>.from(decoded['plan'] as Map? ?? const {}));

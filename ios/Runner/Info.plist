@@ -26,6 +26,10 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSHealthShareUsageDescription</key>
+	<string>We read your Apple Health data to show steps, sleep, and activity automatically.</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>We use your Apple Health data to personalize your wellness insights.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -15,7 +15,7 @@ module.exports = async function handler(req, res) {
   const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   try {
-    const { profile, weekOf } = req.body ?? {};
+    const { profile, weekOf, historicalContext = {} } = req.body ?? {};
     if (!profile) {
       return res.status(400).json({ error: 'profile প্রয়োজন।' });
     }
@@ -30,6 +30,7 @@ module.exports = async function handler(req, res) {
 স্বাস্থ্য সমস্যা: ${(profile.conditions || []).join(', ') || 'কোনো সমস্যা নেই'}
 লক্ষ্য: ${profile.goal}
 সপ্তাহ শুরু: ${weekOf || ''}
+সাম্প্রতিক কনটেক্সট: ${JSON.stringify(historicalContext || {})}
 
 এই সপ্তাহের (৭ দিন) জন্য meal plan বানাও।
 শুধু JSON:
@@ -56,10 +57,11 @@ module.exports = async function handler(req, res) {
 }
 
 নিয়ম:
-- সব বাংলাদেশি খাবার
-- ক্যালরি লক্ষ্য মেনে চলো
-- একই খাবার বারবার দিও না
-- health conditions বিবেচনায় নাও
+- সব দেশীয় সহজলভ্য খাবার
+- variety রাখতে হবে
+- historicalContext-এ যে pattern আছে সেটা consider করবে
+- belly fat/diabetes থাকলে simple carbs control করবে
+- budget-friendly option mix করবে
 `;
 
     const response = await fetch(

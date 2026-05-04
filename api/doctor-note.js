@@ -15,7 +15,7 @@ module.exports = async function handler(req, res) {
   const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   try {
-    const { profile, todayData, recentCategories = [] } = req.body ?? {};
+    const { profile, todayData, recentCategories = [], historicalContext = {} } = req.body ?? {};
     if (!profile || !todayData) {
       return res.status(400).json({ error: 'profile এবং todayData প্রয়োজন।' });
     }
@@ -23,7 +23,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is missing on backend.' });
     }
 
-    const prompt = buildDoctorNotePrompt(profile, todayData, recentCategories);
+    const prompt = buildDoctorNotePrompt(profile, todayData, recentCategories, historicalContext);
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
       {
@@ -51,7 +51,7 @@ module.exports = async function handler(req, res) {
   }
 };
 
-function buildDoctorNotePrompt(profile, todayData, recentCategories) {
+function buildDoctorNotePrompt(profile, todayData, recentCategories, historicalContext) {
   const hour = new Date().getHours();
   const dayOfWeek = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'][new Date().getDay()];
   const timeOfDay = hour < 6 ? 'রাত' : hour < 12 ? 'সকাল' : hour < 17 ? 'দুপুর' : hour < 20 ? 'বিকাল' : 'রাত';
@@ -66,10 +66,10 @@ function buildDoctorNotePrompt(profile, todayData, recentCategories) {
   ];
 
   const timePriority = {
-    'সকাল': ['morning_routine', 'food_suggestion', 'breathing_exercise'],
-    'দুপুর': ['food_suggestion', 'water_reminder', 'digestion'],
-    'বিকাল': ['exercise_tip', 'water_reminder', 'nutrition_fact'],
-    'রাত': ['sleep_advice', 'mental_health', 'meditation_stress'],
+    সকাল: ['morning_routine', 'food_suggestion', 'breathing_exercise'],
+    দুপুর: ['food_suggestion', 'water_reminder', 'digestion'],
+    বিকাল: ['exercise_tip', 'water_reminder', 'nutrition_fact'],
+    রাত: ['sleep_advice', 'mental_health', 'meditation_stress'],
   };
 
   const prioritized = [...(timePriority[timeOfDay] || []), ...allCategories]
@@ -80,7 +80,7 @@ function buildDoctorNotePrompt(profile, todayData, recentCategories) {
     : '0.0';
 
   return `
-তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ এবং মনোবিজ্ঞানী।
+তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ এবং মানসিক-স্বাস্থ্য সহচর।
 এখন ${timeOfDay}, ${dayOfWeek}।
 
 ইউজারের তথ্য:
@@ -92,14 +92,17 @@ function buildDoctorNotePrompt(profile, todayData, recentCategories) {
 - লক্ষ্য: ${profile.goal}
 - স্বাস্থ্য সমস্যা: ${(profile.conditions || []).join(', ') || 'কোনো সমস্যা নেই'}
 - আজ খেয়েছে: ${todayData.totalCal || 0} kcal (লক্ষ্য ${profile.dailyCalorieTarget || 0} kcal)
-- পানি পান: ${todayData.waterLog || 0}/8 গ্লাস
-- ব্যায়াম সম্পন্ন: ${todayData.exerciseDone || 0}টি
+- পানি: ${todayData.waterLog || 0}/8 গ্লাস
+- ব্যায়াম: ${todayData.exerciseDone || 0}টি
+
+গত কয়েক দিনের প্যাটার্ন:
+${JSON.stringify(historicalContext || {})}
 
 পরামর্শের ধরন: ${category}
 
 শুধু valid JSON দাও:
 {
-  "content": "২-৩ বাক্যের খুব নির্দিষ্ট ব্যক্তিগত পরামর্শ",
+  "content": "২-৩ বাক্যের নির্দিষ্ট, উষ্ণ, professional personal-doctor advice",
   "category": "${category}",
   "contextSnapshot": {
     "timeOfDay": "${timeOfDay}",
@@ -113,7 +116,7 @@ function buildDoctorNotePrompt(profile, todayData, recentCategories) {
 নিয়ম:
 - ${profile.name} নাম একবার ব্যবহার করো
 - generic advice নয়
-- user এর actual data refer করো
+- historicalContext-এর অন্তত একটি pattern refer করো যদি relevant হয়
 - বাংলায়
 `;
 }

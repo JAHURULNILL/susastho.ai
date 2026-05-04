@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -31,9 +33,6 @@ Future<void> main() async {
 
   try {
     await FirebaseBootstrapService.initialize();
-    final notifications = NotificationService(FlutterLocalNotificationsPlugin());
-    await notifications.initialize();
-    await notifications.scheduleDailyReminders();
   } catch (error) {
     startupError = error;
   }
@@ -43,4 +42,15 @@ Future<void> main() async {
       child: SushasthoApp(startupError: startupError),
     ),
   );
+
+  if (startupError == null) {
+    unawaited(FirebaseBootstrapService.ensureSignedIn());
+    unawaited(_initializeNotifications());
+  }
+}
+
+Future<void> _initializeNotifications() async {
+  final notifications = NotificationService(FlutterLocalNotificationsPlugin());
+  await notifications.initialize();
+  await notifications.scheduleDailyReminders();
 }

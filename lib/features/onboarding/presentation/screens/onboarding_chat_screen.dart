@@ -39,8 +39,8 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent + 120,
-          duration: const Duration(milliseconds: 250),
+          _scrollController.position.maxScrollExtent + 160,
+          duration: const Duration(milliseconds: 260),
           curve: Curves.easeOut,
         );
       }
@@ -50,8 +50,11 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(onboardingProvider);
+    final isConditionStep = state.step == OnboardingStep.conditions;
+    final isGenderStep = state.step == OnboardingStep.gender;
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: Column(
           children: [
@@ -93,24 +96,91 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
               ),
             ),
             Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                itemCount: state.messages.length + (state.isSaving ? 1 : 0),
-                itemBuilder: (context, index) {
-                  if (index == state.messages.length) {
-                    return const TypingIndicator();
-                  }
-                  return ChatBubble(message: state.messages[index]);
-                },
+              child: isConditionStep
+                  ? _buildConditionStep(context, state)
+                  : _buildChatArea(state),
+            ),
+            if (!isConditionStep)
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 250),
+                child: isGenderStep ? _buildGenderSelector(context) : _buildInputArea(context, state),
               ),
-            ),
-            AnimatedSwitcher(
-              duration: const Duration(milliseconds: 250),
-              child: _buildInputArea(context, state),
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildChatArea(OnboardingState state) {
+    return ListView.builder(
+      controller: _scrollController,
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      itemCount: state.messages.length + (state.isSaving ? 1 : 0),
+      itemBuilder: (context, index) {
+        if (index == state.messages.length) {
+          return const TypingIndicator();
+        }
+        return ChatBubble(message: state.messages[index]);
+      },
+    );
+  }
+
+  Widget _buildConditionStep(BuildContext context, OnboardingState state) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      padding: EdgeInsets.fromLTRB(16, 8, 16, 24 + MediaQuery.viewPaddingOf(context).bottom),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primaryFaint,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'আপনার কোন কোন শারীরিক সমস্যা আছে?',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  'একাধিক নির্বাচন করতে পারেন। কিছু না থাকলে কিছু না বেছে সরাসরি এগিয়ে যান।',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: state.availableConditions
+                .map(
+                  (condition) => OptionChip(
+                    label: condition.labelBn,
+                    isSelected: state.conditions.contains(condition),
+                    onTap: () {
+                      ref.read(onboardingProvider.notifier).toggleCondition(condition);
+                      _scrollToBottom();
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+          _ProfilePreviewCard(state: state),
+          const SizedBox(height: 16),
+          PrimaryButton(
+            label: state.isSaving ? 'প্রোফাইল সংরক্ষণ হচ্ছে...' : 'ড্যাশবোর্ডে চলুন',
+            onPressed: state.isSaving ? null : () => ref.read(onboardingProvider.notifier).finish(ref),
+            icon: Icons.check_circle_outline_rounded,
+          ),
+        ],
       ),
     );
   }
@@ -118,17 +188,54 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
   double _progressFor(OnboardingStep step) {
     return switch (step) {
       OnboardingStep.name => 0.16,
-      OnboardingStep.age => 0.32,
-      OnboardingStep.weight => 0.48,
-      OnboardingStep.height => 0.64,
-      OnboardingStep.goal => 0.82,
+      OnboardingStep.gender => 0.28,
+      OnboardingStep.age => 0.40,
+      OnboardingStep.weight => 0.56,
+      OnboardingStep.height => 0.70,
+      OnboardingStep.goal => 0.84,
       OnboardingStep.conditions => 0.96,
       OnboardingStep.complete => 1.0,
     };
   }
 
+  Widget _buildGenderSelector(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: AppColors.border)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text('আপনি ছেলে নাকি মেয়ে?', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 10,
+            runSpacing: 10,
+            children: UserGender.values
+                .map(
+                  (gender) => OptionChip(
+                    label: gender.labelBn,
+                    isSelected: false,
+                    onTap: () {
+                      ref.read(onboardingProvider.notifier).selectGender(gender);
+                      _scrollToBottom();
+                    },
+                  ),
+                )
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildInputArea(BuildContext context, OnboardingState state) {
     switch (state.step) {
+      case OnboardingStep.gender:
+        return const SizedBox.shrink();
       case OnboardingStep.goal:
         return _GoalSelector(
           onSelect: (goal) {
@@ -137,13 +244,8 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
           },
         );
       case OnboardingStep.conditions:
-        return _ConditionSelector(
-          state: state,
-          onToggle: (condition) => ref.read(onboardingProvider.notifier).toggleCondition(condition),
-          onContinue: () async => ref.read(onboardingProvider.notifier).finish(ref),
-        );
       case OnboardingStep.complete:
-        return const SizedBox(height: 16);
+        return const SizedBox.shrink();
       case OnboardingStep.name:
       case OnboardingStep.age:
       case OnboardingStep.weight:
@@ -154,23 +256,34 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
             color: Colors.white,
             border: Border(top: BorderSide(color: AppColors.border)),
           ),
-          child: Row(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: TextField(
-                  controller: _controller,
-                  keyboardType: state.step == OnboardingStep.name
-                      ? TextInputType.name
-                      : const TextInputType.numberWithOptions(decimal: true),
-                  textInputAction: TextInputAction.done,
-                  onSubmitted: (_) => _submit(),
-                  decoration: InputDecoration(hintText: _hintFor(state.step)),
-                ),
+              Text(
+                _questionFor(state.step, state.name),
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(width: 12),
-              IconButton.filled(
-                onPressed: _submit,
-                icon: const Icon(Icons.send_rounded),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      keyboardType: state.step == OnboardingStep.name
+                          ? TextInputType.name
+                          : const TextInputType.numberWithOptions(decimal: true),
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _submit(),
+                      decoration: InputDecoration(hintText: _hintFor(state.step)),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  IconButton.filled(
+                    onPressed: _submit,
+                    icon: const Icon(Icons.send_rounded),
+                  ),
+                ],
               ),
             ],
           ),
@@ -178,12 +291,24 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
     }
   }
 
+  String _questionFor(OnboardingStep step, String? name) {
+    return switch (step) {
+      OnboardingStep.name => 'আপনার নাম কী?',
+      OnboardingStep.gender => 'আপনি ছেলে নাকি মেয়ে?',
+      OnboardingStep.age => '${name ?? 'আপনার'} বয়স কত?',
+      OnboardingStep.weight => 'আপনার বর্তমান ওজন কত কেজি?',
+      OnboardingStep.height => 'আপনার উচ্চতা কত সেন্টিমিটার?',
+      _ => 'এখানে লিখুন',
+    };
+  }
+
   String _hintFor(OnboardingStep step) {
     return switch (step) {
-      OnboardingStep.name => 'আপনার নাম লিখুন',
+      OnboardingStep.name => 'যেমন Zahurul',
+      OnboardingStep.gender => 'ছেলে বা মেয়ে',
       OnboardingStep.age => 'যেমন ২৪',
       OnboardingStep.weight => 'যেমন ৬৫',
-      OnboardingStep.height => 'যেমন ১৭৬',
+      OnboardingStep.height => 'যেমন ১৭৭',
       _ => 'এখানে লিখুন',
     };
   }
@@ -202,65 +327,24 @@ class _GoalSelector extends StatelessWidget {
         color: Colors.white,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
-      child: Wrap(
-        spacing: 10,
-        runSpacing: 10,
-        children: UserGoal.values
-            .map(
-              (goal) => OptionChip(
-                label: goal.labelBn,
-                isSelected: false,
-                onTap: () => onSelect(goal),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
-}
-
-class _ConditionSelector extends StatelessWidget {
-  const _ConditionSelector({
-    required this.state,
-    required this.onToggle,
-    required this.onContinue,
-  });
-
-  final OnboardingState state;
-  final ValueChanged<HealthCondition> onToggle;
-  final Future<void> Function() onContinue;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: AppColors.border)),
-      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
+          Text('আপনার প্রধান লক্ষ্য বেছে নিন', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
           Wrap(
             spacing: 10,
             runSpacing: 10,
-            children: HealthCondition.values
+            children: UserGoal.values
                 .map(
-                  (condition) => OptionChip(
-                    label: condition.labelBn,
-                    isSelected: state.conditions.contains(condition),
-                    onTap: () => onToggle(condition),
+                  (goal) => OptionChip(
+                    label: goal.labelBn,
+                    isSelected: false,
+                    onTap: () => onSelect(goal),
                   ),
                 )
                 .toList(),
-          ),
-          const SizedBox(height: 16),
-          _ProfilePreviewCard(state: state),
-          const SizedBox(height: 16),
-          PrimaryButton(
-            label: state.isSaving ? 'প্রোফাইল সংরক্ষণ হচ্ছে...' : 'ড্যাশবোর্ডে চলুন',
-            onPressed: state.isSaving ? null : () => onContinue(),
-            icon: Icons.check_circle_outline_rounded,
           ),
         ],
       ),
@@ -297,6 +381,7 @@ class _ProfilePreviewCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('✓ নাম: ${state.name}'),
+          Text('✓ লিঙ্গ: ${state.gender?.labelBn ?? '—'}'),
           Text(
             '✓ বয়স: ${BengaliFormatters.toBengaliNumber(state.age!)} বছর, ওজন: ${BengaliFormatters.toBengaliNumber(state.weightKg!, fractionDigits: 0)}kg, উচ্চতা: ${BengaliFormatters.toBengaliNumber(state.heightCm!, fractionDigits: 0)}cm',
           ),
@@ -315,7 +400,8 @@ class _ProfilePreviewCard extends StatelessWidget {
   }
 
   int _dailyTarget() {
-    final base = (10 * state.weightKg!) + (6.25 * state.heightCm!) - (5 * state.age!) + 5;
+    final genderAdjustment = state.gender == UserGender.female ? -161 : 5;
+    final base = (10 * state.weightKg!) + (6.25 * state.heightCm!) - (5 * state.age!) + genderAdjustment;
     return switch (state.goal!) {
       UserGoal.weightLoss => (base - 250).round(),
       UserGoal.weightGain => (base + 250).round(),

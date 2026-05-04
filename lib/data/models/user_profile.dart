@@ -1,5 +1,10 @@
 import '../../core/utils/health_calculators.dart';
 
+enum UserGender {
+  male,
+  female,
+}
+
 enum UserGoal {
   weightLoss,
   weightGain,
@@ -20,6 +25,26 @@ enum HealthCondition {
   kidneyIssues,
   digestiveIssues,
   insomnia,
+  pcos,
+  irregularPeriods,
+  hormonalImbalance,
+}
+
+extension UserGenderX on UserGender {
+  String get labelBn => switch (this) {
+        UserGender.male => 'ছেলে',
+        UserGender.female => 'মেয়ে',
+      };
+
+  String get key => switch (this) {
+        UserGender.male => 'male',
+        UserGender.female => 'female',
+      };
+
+  static UserGender fromKey(String value) => switch (value) {
+        'female' => UserGender.female,
+        _ => UserGender.male,
+      };
 }
 
 extension UserGoalX on UserGoal {
@@ -58,6 +83,9 @@ extension HealthConditionX on HealthCondition {
         HealthCondition.kidneyIssues => 'কিডনি সমস্যা',
         HealthCondition.digestiveIssues => 'হজমজনিত সমস্যা',
         HealthCondition.insomnia => 'ঘুমের সমস্যা',
+        HealthCondition.pcos => 'পিসিওএস',
+        HealthCondition.irregularPeriods => 'অনিয়মিত পিরিয়ড',
+        HealthCondition.hormonalImbalance => 'হরমোনাল সমস্যা',
       };
 
   String get key => switch (this) {
@@ -74,7 +102,18 @@ extension HealthConditionX on HealthCondition {
         HealthCondition.kidneyIssues => 'kidneyIssues',
         HealthCondition.digestiveIssues => 'digestiveIssues',
         HealthCondition.insomnia => 'insomnia',
+        HealthCondition.pcos => 'pcos',
+        HealthCondition.irregularPeriods => 'irregularPeriods',
+        HealthCondition.hormonalImbalance => 'hormonalImbalance',
       };
+
+  bool isVisibleFor(UserGender gender) {
+    return switch (this) {
+      HealthCondition.ed || HealthCondition.prematureEjaculation => gender == UserGender.male,
+      HealthCondition.pcos || HealthCondition.irregularPeriods || HealthCondition.hormonalImbalance => gender == UserGender.female,
+      _ => true,
+    };
+  }
 
   static HealthCondition fromKey(String value) => switch (value) {
         'diabetes' => HealthCondition.diabetes,
@@ -90,6 +129,9 @@ extension HealthConditionX on HealthCondition {
         'kidneyIssues' => HealthCondition.kidneyIssues,
         'digestiveIssues' => HealthCondition.digestiveIssues,
         'insomnia' => HealthCondition.insomnia,
+        'pcos' => HealthCondition.pcos,
+        'irregularPeriods' => HealthCondition.irregularPeriods,
+        'hormonalImbalance' => HealthCondition.hormonalImbalance,
         _ => HealthCondition.diabetes,
       };
 }
@@ -97,6 +139,7 @@ extension HealthConditionX on HealthCondition {
 class UserProfile {
   const UserProfile({
     required this.name,
+    required this.gender,
     required this.age,
     required this.weightKg,
     required this.heightCm,
@@ -105,6 +148,7 @@ class UserProfile {
   });
 
   final String name;
+  final UserGender gender;
   final int age;
   final double weightKg;
   final double heightCm;
@@ -117,6 +161,7 @@ class UserProfile {
 
   UserProfile copyWith({
     String? name,
+    UserGender? gender,
     int? age,
     double? weightKg,
     double? heightCm,
@@ -125,6 +170,7 @@ class UserProfile {
   }) {
     return UserProfile(
       name: name ?? this.name,
+      gender: gender ?? this.gender,
       age: age ?? this.age,
       weightKg: weightKg ?? this.weightKg,
       heightCm: heightCm ?? this.heightCm,
@@ -136,6 +182,7 @@ class UserProfile {
   Map<String, dynamic> toJson() {
     return {
       'name': name,
+      'gender': gender.key,
       'age': age,
       'weightKg': weightKg,
       'heightCm': heightCm,
@@ -145,15 +192,20 @@ class UserProfile {
   }
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    final gender = UserGenderX.fromKey(json['gender'] as String? ?? UserGender.male.key);
+    final conditions = ((json['conditions'] as List<dynamic>?) ?? [])
+        .map((item) => HealthConditionX.fromKey(item as String))
+        .where((item) => item.isVisibleFor(gender))
+        .toList();
+
     return UserProfile(
       name: json['name'] as String? ?? '',
+      gender: gender,
       age: (json['age'] as num?)?.toInt() ?? 0,
       weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0,
       heightCm: (json['heightCm'] as num?)?.toDouble() ?? 0,
       goal: UserGoalX.fromKey(json['goal'] as String? ?? UserGoal.maintenance.key),
-      conditions: ((json['conditions'] as List<dynamic>?) ?? [])
-          .map((item) => HealthConditionX.fromKey(item as String))
-          .toList(),
+      conditions: conditions,
     );
   }
 }

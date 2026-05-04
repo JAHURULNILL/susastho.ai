@@ -15,7 +15,7 @@ module.exports = async function handler(req, res) {
   const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
   try {
-    const { profile } = req.body ?? {};
+    const { profile, historicalContext = {} } = req.body ?? {};
     if (!profile) {
       return res.status(400).json({ error: 'profile প্রয়োজন।' });
     }
@@ -31,6 +31,7 @@ module.exports = async function handler(req, res) {
 ইউজার: ${profile.name}, বয়স: ${profile.age}, BMI: ${bmi}
 সমস্যা: ${(profile.conditions || []).join(', ') || 'কোনো সমস্যা নেই'}
 লক্ষ্য: ${profile.goal}
+সাম্প্রতিক কনটেক্সট: ${JSON.stringify(historicalContext || {})}
 
 আজকের জন্য ৩টি উপযুক্ত ব্যায়াম suggest করো।
 শুধু JSON:
@@ -45,6 +46,11 @@ module.exports = async function handler(req, res) {
     }
   ]
 }
+
+নিয়ম:
+- equipment-less বা সহজে করা যায় এমন option prefer করো
+- যদি user-এর সমস্যা পুরুষ স্বাস্থ্য/মূত্রজনিত হয়, kegels বা pelvic-floor relevant হলে suggest করো
+- যদি belly fat/obesity থাকে, walk + core mix রাখো
 `;
 
     const response = await fetch(

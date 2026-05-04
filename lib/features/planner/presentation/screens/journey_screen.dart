@@ -1,14 +1,16 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_design.dart';
 import '../../../../core/utils/bengali_formatters.dart';
 import '../../../../core/widgets/fade_up_item.dart';
 import '../../../../core/widgets/info_card.dart';
+import '../../../../data/models/health_metrics.dart';
 import '../../../../data/models/user_profile.dart';
-import '../../../../data/models/weekly_plan.dart';
+import '../../../../data/models/wellness_snapshot.dart';
 import '../../../../shared/providers/app_state_provider.dart';
 import '../../../home/providers/home_provider.dart';
 import '../../providers/planner_provider.dart';
@@ -19,13 +21,17 @@ class JourneyScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final dashboard = ref.watch(homeDashboardProvider);
-    final exercises = ref.watch(todayExercisesProvider).asData?.value ?? const <WeeklyExerciseItem>[];
-    final weeklyCalories = ref.watch(weeklyCaloriesProvider);
+    final exercises = ref.watch(todayExercisesProvider).asData?.value ?? const [];
+    final weeklyCalories = ref.watch(weeklyCaloriesProvider).asData?.value ?? const <String, double>{};
     final profile = ref.watch(userProfileProvider).asData?.value;
+    final weightHistory = ref.watch(weightHistoryProvider).asData?.value ?? const <WeightHistoryEntry>[];
+    final wellness = ref.watch(wellnessSnapshotProvider).asData?.value;
     final summary = dashboard?.summary;
     final dailyGoal = profile?.dailyCalorieTarget ?? 0;
+    final avgCalories = _averageWeeklyCalories(weeklyCalories);
+    final goalPercent = _goalMetPercent(weeklyCalories, dailyGoal);
 
-    final widgets = [
+    final widgets = <Widget>[
       InfoCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -35,7 +41,7 @@ class JourneyScreen extends ConsumerWidget {
             Text(
               profile == null
                   ? 'জার্নির তথ্য এখানে দেখা যাবে।'
-                  : 'আপনার লগ করা খাবার, পানি আর ব্যায়ামের বাস্তব ডেটা এখানে দেখানো হচ্ছে।',
+                  : 'আপনার খাওয়া, পানি, ব্যায়াম, ঘুম আর ওজনের বাস্তব অগ্রগতি এখানে একসাথে দেখানো হচ্ছে।',
               style: AppTextStyles.body,
             ),
           ],
@@ -46,78 +52,70 @@ class JourneyScreen extends ConsumerWidget {
           Expanded(
             child: _JourneyStat(
               title: 'গড় ক্যালরি',
-              value: _averageWeeklyCalories(weeklyCalories.asData?.value) == null
-                  ? '—'
-                  : BengaliFormatters.toBengaliNumber(_averageWeeklyCalories(weeklyCalories.asData?.value)!.round()),
+              value: avgCalories == null ? '—' : BengaliFormatters.toBengaliNumber(avgCalories.round()),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: _JourneyStat(
               title: 'লক্ষ্য পূরণ',
-              value: _goalMetPercent(weeklyCalories.asData?.value, dailyGoal) == null
-                  ? '—'
-                  : '${BengaliFormatters.toBengaliNumber(_goalMetPercent(weeklyCalories.asData?.value, dailyGoal)!)}%',
+              value: goalPercent == null ? '—' : '${BengaliFormatters.toBengaliNumber(goalPercent)}%',
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: _JourneyStat(
-              title: 'রুটিন',
-              value: exercises.isEmpty ? '—' : '${BengaliFormatters.toBengaliNumber(exercises.where((e) => e.completed).length)} দিন',
+              title: 'রুটিন দিন',
+              value: exercises.isEmpty
+                  ? '—'
+                  : BengaliFormatters.toBengaliNumber(exercises.where((e) => e.completed).length),
             ),
           ),
         ],
       ),
-      weeklyCalories.when(
-        data: (data) => _WeeklyCaloriesChart(
-          weekData: _buildWeekBars(data),
-          dailyGoal: dailyGoal.toDouble(),
-        ),
-        loading: () => const _LoadingCard(title: 'সাপ্তাহিক ক্যালরি চার্ট লোড হচ্ছে...'),
-        error: (error, stackTrace) => _EmptyCard(
-          title: 'চার্ট আনা যায়নি',
-          message: error.toString(),
-        ),
+      _WeeklyCaloriesChart(
+        weekData: _buildWeekBars(weeklyCalories),
+        dailyGoal: dailyGoal.toDouble(),
       ),
+      _WeightTrendCard(entries: weightHistory),
       _HealthGoalProgress(
         profile: profile,
         summaryWater: summary?.waterGlasses ?? 0,
         workouts: exercises.where((item) => item.completed).length,
       ),
-      InfoCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('এই সপ্তাহের ব্যায়াম লগ', style: AppTextStyles.cardTitle),
-            const SizedBox(height: 12),
-            if (exercises.isEmpty)
-              Text('এই সপ্তাহে এখনো কোনো ব্যায়াম লগ নেই।', style: AppTextStyles.body.copyWith(color: AppColors.textMuted))
-            else
-              ...exercises.map(
-                (item) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Text(
-                    '${item.exerciseTitle} • ${item.durationText}${item.completed ? ' • সম্পন্ন' : ''}',
-                    style: AppTextStyles.body,
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
+      if (wellness != null) _JourneyAchievementsCard(snapshot: wellness),
       InfoCard(
         backgroundColor: AppColors.primaryFaint,
         borderColor: AppColors.primaryLight,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('এই সপ্তাহের পর্যালোচনা', style: AppTextStyles.cardTitle),
+            Row(
+              children: [
+                Expanded(
+                  child: Text('🤖 এই সপ্তাহের পর্যালোচনা', style: AppTextStyles.cardTitle),
+                ),
+                if (wellness != null)
+                  TextButton.icon(
+                    onPressed: () => SharePlus.instance.share(
+                      ShareParams(text: wellness.shareText),
+                    ),
+                    icon: const Icon(Icons.ios_share_rounded, size: 16),
+                    label: const Text('শেয়ার'),
+                  ),
+              ],
+            ),
             const SizedBox(height: 8),
             Text(
-              weeklyCalories.asData?.value.isEmpty ?? true
-                  ? 'এই সপ্তাহে এখনো কোনো লগ নেই।'
-                  : 'আপনার বাস্তব ক্যালরি লগ অনুযায়ী এই সপ্তাহের ধারাবাহিকতা এখানে দেখা যাচ্ছে। আরও লগ করলে বিশ্লেষণ আরও নির্ভুল হবে।',
+              weeklyCalories.values.where((value) => value > 0).isEmpty
+                  ? 'প্রথম সপ্তাহের শেষে আপনার বিশ্লেষণ এখানে দেখাবে।'
+                  : _weeklyReviewText(
+                      avgCalories: avgCalories,
+                      goalPercent: goalPercent,
+                      workoutCount: exercises.where((item) => item.completed).length,
+                      profile: profile,
+                      wellness: wellness,
+                    ),
               style: AppTextStyles.body,
             ),
           ],
@@ -139,12 +137,32 @@ class JourneyScreen extends ConsumerWidget {
       ),
     );
   }
+
+  String _weeklyReviewText({
+    required double? avgCalories,
+    required int? goalPercent,
+    required int workoutCount,
+    required UserProfile? profile,
+    required WellnessSnapshot? wellness,
+  }) {
+    final goalLabel = profile?.goal.labelBn ?? 'স্বাস্থ্য লক্ষ্য';
+    final caloriesPart = avgCalories == null
+        ? 'এখনো যথেষ্ট ক্যালরি ডেটা নেই।'
+        : 'এই সপ্তাহে প্রতিদিন গড়ে ${BengaliFormatters.toBengaliNumber(avgCalories.round())} kcal হয়েছে।';
+    final goalPart = goalPercent == null
+        ? 'লক্ষ্য পূরণের হার এখনো তৈরি হয়নি।'
+        : 'লক্ষ্য পূরণের হার ${BengaliFormatters.toBengaliNumber(goalPercent)}%।';
+    final workoutPart = workoutCount == 0
+        ? 'ব্যায়াম routine এখনো শুরু হয়নি।'
+        : '${BengaliFormatters.toBengaliNumber(workoutCount)}টি exercise entry completed হয়েছে।';
+    final streakPart = wellness == null || wellness.calorieStreakDays == 0
+        ? 'এখনো streak তৈরি হয়নি।'
+        : '${BengaliFormatters.toBengaliNumber(wellness.calorieStreakDays)} দিনের ক্যালরি স্ট্রিক চলছে।';
+    return '$caloriesPart $goalPart $workoutPart $streakPart আপনার $goalLabel যাত্রায় ধারাবাহিকতা এখন সবচেয়ে গুরুত্বপূর্ণ।';
+  }
 }
 
-double? _averageWeeklyCalories(Map<String, double>? data) {
-  if (data == null || data.isEmpty) {
-    return null;
-  }
+double? _averageWeeklyCalories(Map<String, double> data) {
   final nonZero = data.values.where((value) => value > 0).toList();
   if (nonZero.isEmpty) {
     return null;
@@ -152,8 +170,8 @@ double? _averageWeeklyCalories(Map<String, double>? data) {
   return nonZero.reduce((a, b) => a + b) / nonZero.length;
 }
 
-int? _goalMetPercent(Map<String, double>? data, int goal) {
-  if (data == null || data.isEmpty || goal <= 0) {
+int? _goalMetPercent(Map<String, double> data, int goal) {
+  if (goal <= 0) {
     return null;
   }
   final logged = data.values.where((value) => value > 0).toList();
@@ -210,7 +228,8 @@ class _WeeklyCaloriesChart extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasAnyData = weekData.any((value) => value > 0);
-    final maxValue = dailyGoal > 0 ? (dailyGoal * 1.2).clamp(1000, 4000) : 2000;
+    final maxY = dailyGoal > 0 ? (dailyGoal * 1.2).clamp(800, 4000).toDouble() : 2200.0;
+
     return InfoCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -218,19 +237,26 @@ class _WeeklyCaloriesChart extends StatelessWidget {
           Text('সাপ্তাহিক ক্যালরি চার্ট', style: AppTextStyles.cardTitle),
           const SizedBox(height: 16),
           SizedBox(
-            height: 180,
-            child: BarChart(
-              BarChartData(
-                maxY: maxValue.toDouble(),
-                gridData: const FlGridData(show: false),
+            height: 200,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
+                  ),
+                ),
                 borderData: FlBorderData(show: false),
-                alignment: BarChartAlignment.spaceAround,
                 extraLinesData: dailyGoal > 0
                     ? ExtraLinesData(
                         horizontalLines: [
                           HorizontalLine(
                             y: dailyGoal,
-                            color: AppColors.red.withValues(alpha: 0.5),
+                            color: AppColors.red.withValues(alpha: 0.35),
                             dashArray: [5, 4],
                             strokeWidth: 1.4,
                           ),
@@ -247,45 +273,145 @@ class _WeeklyCaloriesChart extends StatelessWidget {
                       getTitlesWidget: (value, meta) {
                         const days = ['সো', 'মঙ্গ', 'বুধ', 'বৃহ', 'শু', 'শনি', 'রবি'];
                         return Padding(
-                          padding: const EdgeInsets.only(top: 6),
+                          padding: const EdgeInsets.only(top: 8),
                           child: Text(days[value.toInt()], style: AppTextStyles.caption),
                         );
                       },
                     ),
                   ),
                 ),
-                barGroups: List.generate(weekData.length, (index) {
-                  final value = weekData[index];
-                  final isToday = index == DateTime.now().weekday - 1;
-                  final isFuture = index > DateTime.now().weekday - 1;
-                  final color = isFuture
-                      ? AppColors.border
-                      : value == 0
-                          ? AppColors.border
-                          : value > dailyGoal && dailyGoal > 0
-                              ? AppColors.amber
-                              : isToday
-                                  ? AppColors.primary
-                                  : AppColors.primaryLight;
-                  return BarChartGroupData(
-                    x: index,
-                    barRods: [
-                      BarChartRodData(
-                        toY: value,
-                        color: color,
-                        width: 20,
-                        borderRadius: BorderRadius.circular(8),
+                lineBarsData: [
+                  LineChartBarData(
+                    isCurved: true,
+                    spots: List.generate(
+                      weekData.length,
+                      (index) => FlSpot(index.toDouble(), weekData[index]),
+                    ),
+                    color: AppColors.primary,
+                    barWidth: 3,
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.primaryLight.withValues(alpha: 0.35),
+                          AppColors.primaryLight.withValues(alpha: 0.02),
+                        ],
                       ),
-                    ],
-                  );
-                }),
+                    ),
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                        radius: 4,
+                        color: AppColors.primary,
+                        strokeWidth: 2,
+                        strokeColor: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
           if (!hasAnyData) ...[
             const SizedBox(height: 12),
-            Text('এখনো কোনো ডেটা নেই। খাবার লগ শুরু করুন।', style: AppTextStyles.body.copyWith(color: AppColors.textMuted)),
+            Text(
+              'এখনো কোনো ডেটা নেই। খাবার লগ শুরু করুন।',
+              style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+            ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _WeightTrendCard extends StatelessWidget {
+  const _WeightTrendCard({required this.entries});
+
+  final List<WeightHistoryEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    final reversed = entries.toList().reversed.toList();
+    final hasData = reversed.length >= 2;
+    final minWeight = hasData
+        ? reversed.map((e) => e.weightKg).reduce((a, b) => a < b ? a : b) - 1
+        : 0.0;
+    final maxWeight = hasData
+        ? reversed.map((e) => e.weightKg).reduce((a, b) => a > b ? a : b) + 1
+        : 1.0;
+
+    return InfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('ওজনের ধারা', style: AppTextStyles.cardTitle),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 160,
+            child: hasData
+                ? LineChart(
+                    LineChartData(
+                      minY: minWeight,
+                      maxY: maxWeight,
+                      gridData: FlGridData(
+                        show: true,
+                        drawVerticalLine: false,
+                        getDrawingHorizontalLine: (value) =>
+                            FlLine(color: AppColors.border, strokeWidth: 1),
+                      ),
+                      borderData: FlBorderData(show: false),
+                      titlesData: FlTitlesData(
+                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        bottomTitles: AxisTitles(
+                          sideTitles: SideTitles(
+                            showTitles: true,
+                            getTitlesWidget: (value, meta) {
+                              final index = value.toInt();
+                              if (index < 0 || index >= reversed.length) {
+                                return const SizedBox.shrink();
+                              }
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8),
+                                child: Text(reversed[index].dateKey.substring(5), style: AppTextStyles.caption),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      lineBarsData: [
+                        LineChartBarData(
+                          isCurved: true,
+                          color: AppColors.primary,
+                          barWidth: 3,
+                          spots: List.generate(
+                            reversed.length,
+                            (index) => FlSpot(index.toDouble(), reversed[index].weightKg),
+                          ),
+                          dotData: FlDotData(
+                            show: true,
+                            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                              radius: 4,
+                              color: AppColors.primary,
+                              strokeWidth: 2,
+                              strokeColor: AppColors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                : Center(
+                    child: Text(
+                      'ওজন ট্র্যাকিং শুরু হলে এখানে চার্ট দেখাবে।',
+                      style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+                    ),
+                  ),
+          ),
         ],
       ),
     );
@@ -334,7 +460,7 @@ class _HealthGoalProgress extends StatelessWidget {
             _GoalProgressRow(
               title: items[i].title,
               icon: items[i].icon,
-              ratio: items[i].ratio.clamp(0.0, 1.0),
+              ratio: items[i].ratio.clamp(0.0, 1.0).toDouble(),
             ),
             if (i != items.length - 1) const SizedBox(height: 14),
           ],
@@ -367,7 +493,9 @@ class _GoalProgressRow extends StatelessWidget {
             Expanded(child: Text(title, style: AppTextStyles.bodyLarge)),
             Text(
               hasData ? '${(ratio * 100).round()}%' : 'ট্র্যাকিং শুরু হয়নি',
-              style: AppTextStyles.caption.copyWith(color: hasData ? AppColors.primary : AppColors.textMuted),
+              style: AppTextStyles.caption.copyWith(
+                color: hasData ? AppColors.primary : AppColors.textMuted,
+              ),
             ),
           ],
         ),
@@ -386,10 +514,10 @@ class _GoalProgressRow extends StatelessWidget {
   }
 }
 
-class _LoadingCard extends StatelessWidget {
-  const _LoadingCard({required this.title});
+class _JourneyAchievementsCard extends StatelessWidget {
+  const _JourneyAchievementsCard({required this.snapshot});
 
-  final String title;
+  final WellnessSnapshot snapshot;
 
   @override
   Widget build(BuildContext context) {
@@ -397,33 +525,89 @@ class _LoadingCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.cardTitle),
+          Text('স্ট্রিক ও মাইলস্টোন', style: AppTextStyles.cardTitle),
           const SizedBox(height: 12),
-          const LinearProgressIndicator(),
+          Row(
+            children: [
+              Expanded(
+                child: _JourneyMilestone(
+                  label: 'ক্যালরি স্ট্রিক',
+                  value: snapshot.calorieStreakDays == 0 ? '—' : '${snapshot.calorieStreakDays}',
+                  accent: AppColors.amber,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _JourneyMilestone(
+                  label: 'পানি স্ট্রিক',
+                  value: snapshot.waterStreakDays == 0 ? '—' : '${snapshot.waterStreakDays}',
+                  accent: AppColors.blue,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _JourneyMilestone(
+                  label: 'অ্যাক্টিভ দিন',
+                  value: snapshot.activeDays == 0 ? '—' : '${snapshot.activeDays}',
+                  accent: AppColors.primary,
+                ),
+              ),
+            ],
+          ),
+          if (snapshot.achievements.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: snapshot.achievements.map((achievement) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryFaint,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Text(
+                    '${achievement.emoji} ${achievement.title}',
+                    style: AppTextStyles.caption.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );
   }
 }
 
-class _EmptyCard extends StatelessWidget {
-  const _EmptyCard({
-    required this.title,
-    required this.message,
+class _JourneyMilestone extends StatelessWidget {
+  const _JourneyMilestone({
+    required this.label,
+    required this.value,
+    required this.accent,
   });
 
-  final String title;
-  final String message;
+  final String label;
+  final String value;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
-    return InfoCard(
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: accent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.cardTitle),
+          Text(label, style: AppTextStyles.caption),
           const SizedBox(height: 8),
-          Text(message, style: AppTextStyles.body),
+          Text(value, style: AppTextStyles.metricSmall.copyWith(color: accent)),
         ],
       ),
     );

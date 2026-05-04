@@ -24,7 +24,7 @@ class GreetingHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Today', style: AppTextStyles.caption.copyWith(letterSpacing: 0.2)),
+              Text('আজ', style: AppTextStyles.caption.copyWith(letterSpacing: 0.2)),
               const SizedBox(height: 4),
               Text(profile.name, style: AppTextStyles.screenTitle.copyWith(fontSize: 30)),
               const SizedBox(height: 4),

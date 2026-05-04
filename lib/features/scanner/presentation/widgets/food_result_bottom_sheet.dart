@@ -61,7 +61,10 @@ class FoodResultBottomSheet extends ConsumerWidget {
                       children: [
                         Text(result.foodName, style: AppTextStyles.screenTitle),
                         const SizedBox(height: 4),
-                        Text('AI বিশ্লেষণ • এইমাত্র', style: AppTextStyles.caption),
+                        Text(
+                          _subtitle,
+                          style: AppTextStyles.caption,
+                        ),
                       ],
                     ),
                   ),
@@ -100,18 +103,44 @@ class FoodResultBottomSheet extends ConsumerWidget {
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
                 children: [
-                  _MacroCell(label: 'ক্যালরি', value: '${result.macros.calories.round()}', unit: 'kcal', background: AppColors.primaryPale, accent: AppColors.primary),
-                  _MacroCell(label: 'প্রোটিন', value: result.macros.protein.toStringAsFixed(1), unit: 'g', background: AppColors.bluePale, accent: AppColors.blue),
-                  _MacroCell(label: 'কার্বস', value: result.macros.carbs.toStringAsFixed(1), unit: 'g', background: AppColors.primaryFaint, accent: AppColors.primaryLight),
-                  _MacroCell(label: 'ফ্যাট', value: result.macros.fat.toStringAsFixed(1), unit: 'g', background: AppColors.amberPale, accent: AppColors.amber),
+                  _MacroCell(
+                    label: 'ক্যালরি',
+                    value: '${result.macros.calories.round()}',
+                    unit: 'kcal',
+                    background: AppColors.primaryPale,
+                    accent: AppColors.primary,
+                  ),
+                  _MacroCell(
+                    label: 'প্রোটিন',
+                    value: result.macros.protein.toStringAsFixed(1),
+                    unit: 'g',
+                    background: AppColors.bluePale,
+                    accent: AppColors.blue,
+                  ),
+                  _MacroCell(
+                    label: 'কার্বস',
+                    value: result.macros.carbs.toStringAsFixed(1),
+                    unit: 'g',
+                    background: AppColors.primaryFaint,
+                    accent: AppColors.primaryLight,
+                  ),
+                  _MacroCell(
+                    label: 'ফ্যাট',
+                    value: result.macros.fat.toStringAsFixed(1),
+                    unit: 'g',
+                    background: AppColors.amberPale,
+                    accent: AppColors.amber,
+                  ),
                 ],
               ),
               const SizedBox(height: 18),
               const Divider(height: 1, color: AppColors.border),
               const SizedBox(height: 18),
-              Text('✅ উপকারিতা', style: AppTextStyles.cardTitle),
-              const SizedBox(height: 10),
-              ...result.pros.map((item) => _LineItem(text: item, color: AppColors.primary)),
+              if (result.pros.isNotEmpty) ...[
+                Text('✅ উপকারিতা', style: AppTextStyles.cardTitle),
+                const SizedBox(height: 10),
+                ...result.pros.map((item) => _LineItem(text: item, color: AppColors.primary)),
+              ],
               if (result.warnings.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 Text('⚠️ সতর্কতা', style: AppTextStyles.cardTitle),
@@ -120,116 +149,126 @@ class FoodResultBottomSheet extends ConsumerWidget {
               ],
               if (result.redFlags.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                InfoCard(
+                _InsightCard(
+                  title: '🚨 রিয়েল-টাইম সতর্কতা',
+                  body: result.redFlags.join('\n'),
                   backgroundColor: AppColors.redPale,
                   borderColor: AppColors.red,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('🚨 রিয়েল-টাইম রেড ফ্ল্যাগ', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      ...result.redFlags.map((item) => Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
-                            child: Text(item, style: AppTextStyles.body.copyWith(color: AppColors.red)),
-                          )),
-                    ],
-                  ),
+                  bodyColor: AppColors.red,
                 ),
               ],
               if (result.plateBreakdown.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text('🍽️ মিক্সড-প্লেট বিশ্লেষণ', style: AppTextStyles.cardTitle),
+                Text('🍽️ প্লেট বিশ্লেষণ', style: AppTextStyles.cardTitle),
                 const SizedBox(height: 10),
                 ...result.plateBreakdown.map((item) => _LineItem(text: item, color: AppColors.primaryMid)),
               ],
+              if (result.menuSuggestions.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('📋 এই মেনু থেকে সেরা পছন্দ', style: AppTextStyles.cardTitle),
+                const SizedBox(height: 10),
+                ...result.menuSuggestions.map((item) => _LineItem(text: item, color: AppColors.primary)),
+              ],
+              if (result.receiptInsights.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('🧾 রসিদ বিশ্লেষণ', style: AppTextStyles.cardTitle),
+                const SizedBox(height: 10),
+                ...result.receiptInsights.map((item) => _LineItem(text: item, color: AppColors.primaryMid)),
+              ],
+              if (result.grocerySuggestions.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('🛒 স্মার্ট বাজার তালিকা', style: AppTextStyles.cardTitle),
+                const SizedBox(height: 10),
+                ...result.grocerySuggestions.map((item) => _LineItem(text: item, color: AppColors.primary)),
+              ],
+              if ((result.memoryInsight ?? '').isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _InsightCard(
+                  title: '🧠 সাম্প্রতিক প্যাটার্ন',
+                  body: result.memoryInsight!,
+                  backgroundColor: AppColors.bluePale,
+                  borderColor: AppColors.blue,
+                ),
+              ],
               if ((result.conditionAdvice ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
-                InfoCard(
+                _InsightCard(
+                  title: '🎯 আপনার শরীর অনুযায়ী',
+                  body: result.conditionAdvice!,
                   backgroundColor: AppColors.amberPale,
                   borderColor: AppColors.amber,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('🎯 আপনার স্বাস্থ্য সমস্যা অনুযায়ী', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text(result.conditionAdvice!, style: AppTextStyles.body),
-                    ],
-                  ),
                 ),
               ],
               if ((result.alternative ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
-                InfoCard(
+                _InsightCard(
+                  title: '🌿 স্বাস্থ্যকর বিকল্প',
+                  body: result.alternative!,
                   backgroundColor: AppColors.primaryFaint,
                   borderColor: AppColors.primaryLight,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('🌿 স্বাস্থ্যকর বিকল্প', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text(result.alternative!, style: AppTextStyles.body),
-                    ],
-                  ),
                 ),
               ],
               if ((result.doctorTip ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
-                InfoCard(
+                _InsightCard(
+                  title: '🩺 ডাক্তারের ছোট টিপ',
+                  body: result.doctorTip!,
                   backgroundColor: AppColors.primaryFaint,
                   borderColor: AppColors.primaryLight,
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('🩺 ডক্টর টিপ', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text(result.doctorTip!, style: AppTextStyles.body),
-                    ],
-                  ),
+                ),
+              ],
+              if ((result.bestChoice ?? '').isNotEmpty || (result.budgetImpact ?? '').isNotEmpty) ...[
+                const SizedBox(height: 16),
+                _InsightCard(
+                  title: '✨ স্মার্ট সিদ্ধান্ত',
+                  body: [
+                    if ((result.bestChoice ?? '').isNotEmpty) result.bestChoice!,
+                    if ((result.budgetImpact ?? '').isNotEmpty) result.budgetImpact!,
+                  ].join('\n'),
+                  backgroundColor: AppColors.primaryFaint,
+                  borderColor: AppColors.primaryLight,
                 ),
               ],
               const SizedBox(height: 18),
               PrimaryButton(
                 label: '+ আজকের খাবারে যোগ করুন',
                 icon: Icons.add_circle_outline_rounded,
-                onPressed: () async {
-                  await ref.read(dailySummaryProvider.notifier).addMeal(
-                        result,
-                        imagePath: imagePath,
-                      );
-                  ref.read(navigationTabProvider.notifier).setTab(0);
-                  if (context.mounted) {
-                    Navigator.of(context).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        backgroundColor: AppColors.primary,
-                        duration: const Duration(seconds: 2),
-                        content: const Text('✓ খাবার লগে যোগ হয়েছে'),
-                      ),
-                    );
-                    if (result.redFlags.isNotEmpty || result.healthScore < 55) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          backgroundColor: AppColors.red,
-                          content: Text(
-                            result.redFlags.isNotEmpty
-                                ? result.redFlags.first
-                                : 'এই খাবারটি আপনার শরীরের জন্য ভারী হতে পারে। আজ অন্তত ২০ মিনিট হাঁটার চেষ্টা করুন।',
-                          ),
-                        ),
-                      );
-                    }
-                  }
-                },
+                onPressed: result.analysisMode == 'meal'
+                    ? () async {
+                        await ref.read(dailySummaryProvider.notifier).addMeal(
+                              result,
+                              imagePath: imagePath,
+                            );
+                        ref.read(navigationTabProvider.notifier).setTab(0);
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              backgroundColor: AppColors.primary,
+                              duration: Duration(seconds: 2),
+                              content: Text('✓ খাবার লগে যোগ হয়েছে'),
+                            ),
+                          );
+                        }
+                      }
+                    : null,
               ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  String get _subtitle {
+    switch (result.analysisMode) {
+      case 'menu':
+        return 'AI মেনু বিশ্লেষণ • এইমাত্র';
+      case 'receipt':
+        return 'AI রসিদ বিশ্লেষণ • এইমাত্র';
+      default:
+        return 'AI বিশ্লেষণ • এইমাত্র';
+    }
   }
 
   Color get _scoreColor {
@@ -250,6 +289,42 @@ class FoodResultBottomSheet extends ConsumerWidget {
       return AppColors.amberPale;
     }
     return AppColors.redPale;
+  }
+}
+
+class _InsightCard extends StatelessWidget {
+  const _InsightCard({
+    required this.title,
+    required this.body,
+    required this.backgroundColor,
+    required this.borderColor,
+    this.bodyColor,
+  });
+
+  final String title;
+  final String body;
+  final Color backgroundColor;
+  final Color borderColor;
+  final Color? bodyColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return InfoCard(
+      backgroundColor: backgroundColor,
+      borderColor: borderColor,
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+          const SizedBox(height: 8),
+          Text(
+            body,
+            style: AppTextStyles.body.copyWith(color: bodyColor ?? AppColors.textPrimary),
+          ),
+        ],
+      ),
+    );
   }
 }
 

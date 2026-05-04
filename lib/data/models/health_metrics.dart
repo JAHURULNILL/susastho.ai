@@ -29,15 +29,18 @@ class SleepLogRecord {
 class StepLogRecord {
   const StepLogRecord({
     required this.steps,
+    required this.activeCalories,
     required this.dateKey,
   });
 
   final int steps;
+  final double activeCalories;
   final String dateKey;
 
   factory StepLogRecord.fromJson(Map<String, dynamic> json) {
     return StepLogRecord(
       steps: (json['steps'] as num?)?.toInt() ?? 0,
+      activeCalories: (json['activeCalories'] as num?)?.toDouble() ?? 0,
       dateKey: json['dateKey'] as String? ?? json['date'] as String? ?? '',
     );
   }
@@ -45,6 +48,7 @@ class StepLogRecord {
   Map<String, dynamic> toJson() {
     return {
       'steps': steps,
+      'activeCalories': activeCalories,
       'dateKey': dateKey,
     };
   }

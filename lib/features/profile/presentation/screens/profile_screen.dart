@@ -56,16 +56,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Column(
           children: [
             Container(
-              width: 80,
-              height: 80,
+              width: 84,
+              height: 84,
               decoration: BoxDecoration(
-                color: AppColors.primary,
+                gradient: const LinearGradient(
+                  colors: [AppColors.primary, AppColors.primaryLight],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
                 shape: BoxShape.circle,
                 boxShadow: const [
                   BoxShadow(
-                    color: Color.fromRGBO(27, 94, 59, 0.18),
-                    blurRadius: 14,
-                    offset: Offset(0, 4),
+                    color: Color.fromRGBO(27, 94, 59, 0.22),
+                    blurRadius: 16,
+                    offset: Offset(0, 6),
                   ),
                 ],
               ),
@@ -74,7 +78,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 initial,
                 style: AppTextStyles.metric.copyWith(
                   color: AppColors.white,
-                  fontSize: 28,
+                  fontSize: 30,
                 ),
               ),
             ),
@@ -121,7 +125,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         children: [
           Expanded(
             child: _MetricCard(
-              title: 'বয়স',
+              title: 'বয়স',
               value: '${profile.age}',
               onEdit: () => _editProfileValue(context, profile, field: _EditableField.age),
             ),
@@ -129,25 +133,63 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: _MetricCard(
+              title: 'লিঙ্গ',
+              value: profile.gender.labelBn,
+              onEdit: () => _editGender(context, profile),
+            ),
+          ),
+        ],
+      ),
+      Row(
+        children: [
+          Expanded(
+            child: _MetricCard(
               title: 'লক্ষ্য',
               value: profile.goal.labelBn,
               onEdit: () => _editGoal(context, profile),
             ),
           ),
+          const SizedBox(width: AppSpacing.sm),
+          Expanded(
+            child: _MetricCard(
+              title: 'স্টেপ লক্ষ্য',
+              value: '${profile.dailyStepTarget}',
+              onEdit: () {},
+            ),
+          ),
         ],
       ),
+      _EditableConditionsCard(profile: profile),
       InfoCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('আজকের ট্র্যাকিং', style: AppTextStyles.cardTitle),
-            const SizedBox(height: 12),
+            Text('ওয়্যারেবল ও অ্যাক্টিভিটি সিঙ্ক', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('Health Connect / Apple Health সিঙ্ক', style: AppTextStyles.bodyLarge),
+              subtitle: Text(
+                'চালু থাকলে স্টেপ, ঘুম আর activity data স্বয়ংক্রিয়ভাবে আসবে।',
+                style: AppTextStyles.caption,
+              ),
+              value: settings.wearableSyncEnabled,
+              onChanged: (value) async {
+                await ref.read(appSettingsProvider.notifier).save(
+                      settings.copyWith(wearableSyncEnabled: value),
+                    );
+                if (value) {
+                  await ref.read(healthSyncServiceProvider).syncToday();
+                }
+              },
+            ),
+            const SizedBox(height: 10),
             Row(
               children: [
                 Expanded(
                   child: _MetricCard(
                     title: 'ঘুম',
-                    value: sleep == null || sleep.hours == 0 ? '—' : '${sleep.hours.toStringAsFixed(1)} ঘন্টা',
+                    value: sleep == null || sleep.hours == 0 ? '—' : '${sleep.hours.toStringAsFixed(1)} ঘ',
                     onEdit: () => _editSleep(context),
                   ),
                 ),
@@ -161,30 +203,88 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text('ওজন ইতিহাস', style: AppTextStyles.bodyLarge),
-            const SizedBox(height: 8),
-            if (weightHistory.isEmpty)
-              Text('—', style: AppTextStyles.body.copyWith(color: AppColors.textMuted))
-            else
-              ...weightHistory.take(5).map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(bottom: 6),
-                  child: Text(
-                    '${entry.weightKg.toStringAsFixed(1)} kg • ${entry.dateKey}',
-                    style: AppTextStyles.body,
-                  ),
-                ),
-              ),
           ],
         ),
       ),
-      _EditableConditionsCard(profile: profile),
       InfoCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('দৈনিক লক্ষ্য সেটিংস', style: AppTextStyles.cardTitle),
+            Text('থিম ও experience', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<AppThemeModePreference>(
+              initialValue: settings.themeMode,
+              items: const [
+                DropdownMenuItem(value: AppThemeModePreference.system, child: Text('সিস্টেম')),
+                DropdownMenuItem(value: AppThemeModePreference.light, child: Text('লাইট')),
+                DropdownMenuItem(value: AppThemeModePreference.dark, child: Text('ডার্ক')),
+              ],
+              onChanged: (value) async {
+                if (value == null) return;
+                await ref.read(appSettingsProvider.notifier).save(settings.copyWith(themeMode: value));
+              },
+              decoration: const InputDecoration(labelText: 'থিম মোড'),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: settings.units,
+              items: const [
+                DropdownMenuItem(value: 'মেট্রিক', child: Text('মেট্রিক')),
+                DropdownMenuItem(value: 'ইম্পেরিয়াল', child: Text('ইম্পেরিয়াল')),
+              ],
+              onChanged: (value) async {
+                if (value == null) return;
+                await ref.read(appSettingsProvider.notifier).save(settings.copyWith(units: value));
+              },
+              decoration: const InputDecoration(labelText: 'একক'),
+            ),
+          ],
+        ),
+      ),
+      InfoCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ইন্টারমিটেন্ট ফাস্টিং', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 8),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text('ফাস্টিং টাইমার চালু', style: AppTextStyles.bodyLarge),
+              value: settings.fastingEnabled,
+              onChanged: (value) async {
+                await ref.read(appSettingsProvider.notifier).save(
+                      settings.copyWith(fastingEnabled: value),
+                    );
+              },
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _MiniSettingBox(
+                    title: 'শুরু',
+                    value: '${settings.fastingStartHour}:00',
+                    onTap: () => _pickFastingHour(context, settings),
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _MiniSettingBox(
+                    title: 'সময়',
+                    value: '${settings.fastingWindowHours} ঘ',
+                    onTap: () => _pickFastingWindow(context, settings),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+      InfoCard(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('দৈনিক লক্ষ্য ও রিমাইন্ডার', style: AppTextStyles.cardTitle),
             const SizedBox(height: 12),
             TextField(
               controller: _goalController,
@@ -201,24 +301,21 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 final goal = int.tryParse(_goalController.text.trim());
                 final updated = settings.copyWith(customCalorieGoal: goal, clearCustomGoal: goal == null);
                 await ref.read(appSettingsProvider.notifier).save(updated);
-                if (mounted) messenger.showSnackBar(const SnackBar(content: Text('পরিবর্তন সংরক্ষিত হয়েছে ✓')));
+                if (mounted) {
+                  messenger.showSnackBar(const SnackBar(content: Text('পরিবর্তন সংরক্ষিত হয়েছে ✓')));
+                }
               },
               icon: Icons.flag_rounded,
             ),
-          ],
-        ),
-      ),
-      InfoCard(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('নোটিফিকেশন সেটিংস', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 8),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
-              title: Text('দৈনিক রিমাইন্ডার চালু', style: AppTextStyles.bodyLarge),
+              title: Text('দৈনিক স্মার্ট নোটিফিকেশন', style: AppTextStyles.bodyLarge),
               value: settings.notificationsEnabled,
               onChanged: (value) async {
-                await ref.read(appSettingsProvider.notifier).save(settings.copyWith(notificationsEnabled: value));
+                await ref.read(appSettingsProvider.notifier).save(
+                      settings.copyWith(notificationsEnabled: value),
+                    );
               },
             ),
           ],
@@ -228,32 +325,25 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('অ্যাপ সেটিংস', style: AppTextStyles.cardTitle),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: settings.language,
-              items: const [
-                DropdownMenuItem(value: 'বাংলা', child: Text('বাংলা')),
-                DropdownMenuItem(value: 'English', child: Text('English')),
-              ],
-              onChanged: (value) async {
-                if (value == null) return;
-                await ref.read(appSettingsProvider.notifier).save(settings.copyWith(language: value));
-              },
-              decoration: const InputDecoration(labelText: 'Language'),
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: settings.units,
-              items: const [
-                DropdownMenuItem(value: 'মেট্রিক', child: Text('মেট্রিক')),
-                DropdownMenuItem(value: 'ইম্পেরিয়াল', child: Text('ইম্পেরিয়াল')),
-              ],
-              onChanged: (value) async {
-                if (value == null) return;
-                await ref.read(appSettingsProvider.notifier).save(settings.copyWith(units: value));
-              },
-              decoration: const InputDecoration(labelText: 'Units'),
+            Text('ওজন ইতিহাস', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 8),
+            if (weightHistory.isEmpty)
+              Text('এখনো কোনো রেকর্ড নেই।', style: AppTextStyles.body.copyWith(color: AppColors.textMuted))
+            else
+              ...weightHistory.take(6).map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Text(
+                    '${entry.weightKg.toStringAsFixed(1)} kg • ${entry.dateKey}',
+                    style: AppTextStyles.body,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 10),
+            PrimaryButton(
+              label: 'আজকের ওজন যোগ করুন',
+              onPressed: () => _addWeight(context),
+              icon: Icons.monitor_weight_outlined,
             ),
           ],
         ),
@@ -277,13 +367,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   (String, Color) _bmiMeta(double bmi) {
     if (bmi < 18.5) {
-      return ('আন্ডারওয়েট', AppColors.blue);
+      return ('আন্ডারওয়েট', AppColors.blue);
     }
     if (bmi < 25) {
       return ('স্বাভাবিক ✓', AppColors.primary);
     }
     if (bmi < 30) {
-      return ('ওভারওয়েট', AppColors.amber);
+      return ('ওভারওয়েট', AppColors.amber);
     }
     return ('স্থূলতা', AppColors.red);
   }
@@ -311,10 +401,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           children: [
             Text(field.label, style: AppTextStyles.cardTitle),
             const SizedBox(height: 12),
-            TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-            ),
+            TextField(controller: controller, keyboardType: TextInputType.number),
             const SizedBox(height: 12),
             PrimaryButton(
               label: 'সংরক্ষণ করুন',
@@ -363,6 +450,35 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     );
   }
 
+  Future<void> _editGender(BuildContext context, UserProfile profile) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('লিঙ্গ পরিবর্তন', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 12),
+            ...UserGender.values.map(
+              (gender) => ListTile(
+                title: Text(gender.labelBn),
+                onTap: () async {
+                  final filtered = profile.conditions.where((item) => item.isVisibleFor(gender)).toList();
+                  await ref.read(userProfileProvider.notifier).save(
+                        profile.copyWith(gender: gender, conditions: filtered),
+                      );
+                  if (context.mounted) Navigator.pop(context);
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _editSleep(BuildContext context) async {
     final hoursController = TextEditingController();
     String selectedQuality = 'good';
@@ -387,10 +503,10 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               DropdownButtonFormField<String>(
                 initialValue: selectedQuality,
                 items: const [
-                  DropdownMenuItem(value: 'poor', child: Text('Poor')),
-                  DropdownMenuItem(value: 'fair', child: Text('Fair')),
-                  DropdownMenuItem(value: 'good', child: Text('Good')),
-                  DropdownMenuItem(value: 'excellent', child: Text('Excellent')),
+                  DropdownMenuItem(value: 'poor', child: Text('কম')),
+                  DropdownMenuItem(value: 'fair', child: Text('মোটামুটি')),
+                  DropdownMenuItem(value: 'good', child: Text('ভালো')),
+                  DropdownMenuItem(value: 'excellent', child: Text('চমৎকার')),
                 ],
                 onChanged: (value) {
                   if (value == null) return;
@@ -450,12 +566,106 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
     );
   }
+
+  Future<void> _pickFastingHour(BuildContext context, AppSettings settings) async {
+    final controller = TextEditingController(text: '${settings.fastingStartHour}');
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ফাস্টিং শুরু হওয়ার সময়', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 12),
+            TextField(controller: controller, keyboardType: TextInputType.number),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'সংরক্ষণ করুন',
+              onPressed: () async {
+                final value = int.tryParse(controller.text.trim());
+                if (value == null) return;
+                await ref.read(appSettingsProvider.notifier).save(
+                      settings.copyWith(fastingStartHour: value.clamp(0, 23)),
+                    );
+                if (context.mounted) Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _pickFastingWindow(BuildContext context, AppSettings settings) async {
+    final controller = TextEditingController(text: '${settings.fastingWindowHours}');
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ফাস্টিং উইন্ডো (ঘণ্টা)', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 12),
+            TextField(controller: controller, keyboardType: TextInputType.number),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'সংরক্ষণ করুন',
+              onPressed: () async {
+                final value = int.tryParse(controller.text.trim());
+                if (value == null) return;
+                await ref.read(appSettingsProvider.notifier).save(
+                      settings.copyWith(fastingWindowHours: value.clamp(8, 23)),
+                    );
+                if (context.mounted) Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addWeight(BuildContext context) async {
+    final controller = TextEditingController();
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('আজকের ওজন', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 12),
+            TextField(controller: controller, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'সংরক্ষণ করুন',
+              onPressed: () async {
+                final value = double.tryParse(controller.text.trim());
+                if (value == null) return;
+                await ref.read(healthMetricsRepositoryProvider).addWeightEntry(value);
+                if (context.mounted) Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 enum _EditableField {
   weight('ওজন'),
   height('উচ্চতা'),
-  age('বয়স');
+  age('বয়স');
 
   const _EditableField(this.label);
 
@@ -478,7 +688,7 @@ class _EditableConditionsCard extends ConsumerWidget {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: HealthCondition.values.map((condition) {
+            children: HealthCondition.values.where((condition) => condition.isVisibleFor(profile.gender)).map((condition) {
               final selected = profile.conditions.contains(condition);
               return AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
@@ -506,7 +716,7 @@ class _EditableConditionsCard extends ConsumerWidget {
                     await ref.read(userProfileProvider.notifier).save(profile.copyWith(conditions: updated));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('পরিবর্তন সংরক্ষিত হয়েছে ✓')),
+                        const SnackBar(content: Text('পরিবর্তন সংরক্ষিত হয়েছে ✓')),
                       );
                     }
                   },
@@ -548,8 +758,43 @@ class _MetricCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(value, style: AppTextStyles.metricSmall),
+          Text(value, style: AppTextStyles.metricSmall, maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
+      ),
+    );
+  }
+}
+
+class _MiniSettingBox extends StatelessWidget {
+  const _MiniSettingBox({
+    required this.title,
+    required this.value,
+    required this.onTap,
+  });
+
+  final String title;
+  final String value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.primaryFaint,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, style: AppTextStyles.caption),
+            const SizedBox(height: 8),
+            Text(value, style: AppTextStyles.metricSmall),
+          ],
+        ),
       ),
     );
   }

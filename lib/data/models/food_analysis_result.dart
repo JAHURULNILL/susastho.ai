@@ -48,6 +48,13 @@ class FoodAnalysisResult {
     this.plateBreakdown = const [],
     this.redFlags = const [],
     this.doctorTip,
+    this.analysisMode = 'meal',
+    this.menuSuggestions = const [],
+    this.receiptInsights = const [],
+    this.grocerySuggestions = const [],
+    this.memoryInsight,
+    this.bestChoice,
+    this.budgetImpact,
     this.modelId,
     this.modelName,
     this.modelVersion,
@@ -69,6 +76,13 @@ class FoodAnalysisResult {
   final List<String> plateBreakdown;
   final List<String> redFlags;
   final String? doctorTip;
+  final String analysisMode;
+  final List<String> menuSuggestions;
+  final List<String> receiptInsights;
+  final List<String> grocerySuggestions;
+  final String? memoryInsight;
+  final String? bestChoice;
+  final String? budgetImpact;
   final String? modelId;
   final String? modelName;
   final String? modelVersion;
@@ -100,6 +114,19 @@ class FoodAnalysisResult {
           .map((e) => e.toString())
           .toList(),
       doctorTip: json['doctorTip'] as String? ?? json['doctor_tip'] as String?,
+      analysisMode: json['analysisMode'] as String? ?? json['analysis_mode'] as String? ?? 'meal',
+      menuSuggestions: ((json['menuSuggestions'] as List<dynamic>?) ?? json['menu_suggestions'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      receiptInsights: ((json['receiptInsights'] as List<dynamic>?) ?? json['receipt_insights'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      grocerySuggestions: ((json['grocerySuggestions'] as List<dynamic>?) ?? json['grocery_suggestions'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      memoryInsight: json['memoryInsight'] as String? ?? json['memory_insight'] as String?,
+      bestChoice: json['bestChoice'] as String? ?? json['best_choice'] as String?,
+      budgetImpact: json['budgetImpact'] as String? ?? json['budget_impact'] as String?,
       modelId: model?['id'] as String?,
       modelName: model?['name'] as String?,
       modelVersion: model?['version'] as String?,
@@ -124,6 +151,13 @@ class FoodAnalysisResult {
       'plateBreakdown': plateBreakdown,
       'redFlags': redFlags,
       'doctorTip': doctorTip,
+      'analysisMode': analysisMode,
+      'menuSuggestions': menuSuggestions,
+      'receiptInsights': receiptInsights,
+      'grocerySuggestions': grocerySuggestions,
+      'memoryInsight': memoryInsight,
+      'bestChoice': bestChoice,
+      'budgetImpact': budgetImpact,
       if (modelId != null || modelName != null || modelVersion != null)
         'model': {
           'id': modelId,

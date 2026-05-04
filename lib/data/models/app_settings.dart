@@ -1,3 +1,9 @@
+enum AppThemeModePreference {
+  system,
+  light,
+  dark,
+}
+
 class AppSettings {
   const AppSettings({
     this.notificationsEnabled = true,
@@ -6,6 +12,11 @@ class AppSettings {
     this.customCalorieGoal,
     this.morningEnergy = 0,
     this.eveningEnergy = 0,
+    this.themeMode = AppThemeModePreference.system,
+    this.wearableSyncEnabled = true,
+    this.fastingEnabled = false,
+    this.fastingStartHour = 20,
+    this.fastingWindowHours = 16,
   });
 
   final bool notificationsEnabled;
@@ -14,6 +25,11 @@ class AppSettings {
   final int? customCalorieGoal;
   final int morningEnergy;
   final int eveningEnergy;
+  final AppThemeModePreference themeMode;
+  final bool wearableSyncEnabled;
+  final bool fastingEnabled;
+  final int fastingStartHour;
+  final int fastingWindowHours;
 
   AppSettings copyWith({
     bool? notificationsEnabled,
@@ -22,6 +38,11 @@ class AppSettings {
     int? customCalorieGoal,
     int? morningEnergy,
     int? eveningEnergy,
+    AppThemeModePreference? themeMode,
+    bool? wearableSyncEnabled,
+    bool? fastingEnabled,
+    int? fastingStartHour,
+    int? fastingWindowHours,
     bool clearCustomGoal = false,
   }) {
     return AppSettings(
@@ -31,6 +52,11 @@ class AppSettings {
       customCalorieGoal: clearCustomGoal ? null : customCalorieGoal ?? this.customCalorieGoal,
       morningEnergy: morningEnergy ?? this.morningEnergy,
       eveningEnergy: eveningEnergy ?? this.eveningEnergy,
+      themeMode: themeMode ?? this.themeMode,
+      wearableSyncEnabled: wearableSyncEnabled ?? this.wearableSyncEnabled,
+      fastingEnabled: fastingEnabled ?? this.fastingEnabled,
+      fastingStartHour: fastingStartHour ?? this.fastingStartHour,
+      fastingWindowHours: fastingWindowHours ?? this.fastingWindowHours,
     );
   }
 
@@ -42,6 +68,11 @@ class AppSettings {
       'customCalorieGoal': customCalorieGoal,
       'morningEnergy': morningEnergy,
       'eveningEnergy': eveningEnergy,
+      'themeMode': themeMode.name,
+      'wearableSyncEnabled': wearableSyncEnabled,
+      'fastingEnabled': fastingEnabled,
+      'fastingStartHour': fastingStartHour,
+      'fastingWindowHours': fastingWindowHours,
     };
   }
 
@@ -53,6 +84,13 @@ class AppSettings {
       customCalorieGoal: (json['customCalorieGoal'] as num?)?.toInt(),
       morningEnergy: (json['morningEnergy'] as num?)?.toInt() ?? 0,
       eveningEnergy: (json['eveningEnergy'] as num?)?.toInt() ?? 0,
+      themeMode: AppThemeModePreference.values.byName(
+        json['themeMode'] as String? ?? AppThemeModePreference.system.name,
+      ),
+      wearableSyncEnabled: json['wearableSyncEnabled'] as bool? ?? true,
+      fastingEnabled: json['fastingEnabled'] as bool? ?? false,
+      fastingStartHour: (json['fastingStartHour'] as num?)?.toInt() ?? 20,
+      fastingWindowHours: (json['fastingWindowHours'] as num?)?.toInt() ?? 16,
     );
   }
 }

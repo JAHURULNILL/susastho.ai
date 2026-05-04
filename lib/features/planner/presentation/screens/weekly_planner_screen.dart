@@ -94,7 +94,7 @@ class WeeklyPlannerScreen extends ConsumerWidget {
         loading: () => const _LoadingCard(title: 'মিল প্ল্যান তৈরি হচ্ছে...'),
         error: (error, stackTrace) => _EmptyDataCard(
           title: 'প্ল্যান আনা যায়নি',
-          message: error.toString(),
+          message: _friendlyError(error),
         ),
       ),
       exercises.isEmpty
@@ -337,4 +337,15 @@ class _WeeklyProgressHeader extends StatelessWidget {
       ),
     );
   }
+}
+
+String _friendlyError(Object error) {
+  final text = error.toString().toLowerCase();
+  if (text.contains('permission-denied')) {
+    return 'ডেটা পড়ার অনুমতি পাওয়া যায়নি। Firebase rules sync হওয়ার পর আবার চেষ্টা করুন।';
+  }
+  if (text.contains('socketexception') || text.contains('failed host lookup')) {
+    return 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না।';
+  }
+  return 'এই মুহূর্তে প্ল্যান আনা যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।';
 }

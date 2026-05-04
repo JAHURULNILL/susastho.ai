@@ -42,7 +42,7 @@ class DailySummaryNotifier extends AsyncNotifier<DailySummary> {
 
   @override
   Future<DailySummary> build() async {
-    final repository = ref.read(dailySummaryRepositoryProvider);
+    final repository = ref.watch(dailySummaryRepositoryProvider);
     _dateKey = repository.todayKey;
 
     ref.onDispose(() async {
@@ -93,12 +93,14 @@ final todayExercisesBootstrapProvider = FutureProvider<void>((ref) async {
   if (profile == null) {
     return;
   }
-  await ref.read(plannerRepositoryProvider).ensureTodayExercises(profile);
+  try {
+    await ref.read(plannerRepositoryProvider).ensureTodayExercises(profile);
+  } catch (_) {}
 });
 
 final todayExercisesProvider = StreamProvider<List<WeeklyExerciseItem>>((ref) {
   ref.watch(todayExercisesBootstrapProvider);
-  return ref.read(plannerRepositoryProvider).watchTodayExercises();
+  return ref.watch(plannerRepositoryProvider).watchTodayExercises();
 });
 
 final activeDoctorNoteProvider = FutureProvider<DoctorNoteRecord?>((ref) async {

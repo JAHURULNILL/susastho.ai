@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_design.dart';
+import '../../../../shared/providers/app_state_provider.dart';
+import '../../providers/home_provider.dart';
 import '../../../planner/presentation/screens/journey_screen.dart';
 import '../../../planner/presentation/screens/weekly_planner_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
@@ -26,21 +28,21 @@ class HomeShell extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(navigationTabProvider);
-    final pages = <Widget>[
-      HomeScreen(
-        onOpenScan: () => ref.read(navigationTabProvider.notifier).setTab(2),
-      ),
-      const WeeklyPlannerScreen(),
-      const ScannerScreen(),
-      const JourneyScreen(),
-      const ProfileScreen(),
-    ];
+    final profile = ref.watch(userProfileProvider).asData?.value;
+    final settings = ref.watch(appSettingsProvider).asData?.value;
+    if (profile != null) {
+      ref.watch(_activityTrackingBootstrapProvider);
+      if (settings?.wearableSyncEnabled ?? true) {
+        ref.watch(_healthSyncBootstrapProvider);
+      }
+      ref.watch(_offlineSyncBootstrapProvider);
+      if (settings?.notificationsEnabled ?? true) {
+        ref.watch(_smartNotificationBootstrapProvider);
+      }
+    }
 
     return Scaffold(
-      body: IndexedStack(
-        index: currentIndex,
-        children: pages,
-      ),
+      body: _buildPage(currentIndex, ref),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Padding(
@@ -52,9 +54,15 @@ class HomeShell extends ConsumerWidget {
               border: Border.all(color: AppColors.border),
               boxShadow: const [
                 BoxShadow(
-                  color: Color.fromRGBO(45, 106, 79, 0.12),
-                  blurRadius: 20,
-                  offset: Offset(0, 8),
+                  color: Color.fromRGBO(18, 48, 31, 0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, 2),
+                ),
+                BoxShadow(
+                  color: Color.fromRGBO(45, 106, 79, 0.16),
+                  blurRadius: 28,
+                  spreadRadius: -8,
+                  offset: Offset(0, 12),
                 ),
               ],
             ),
@@ -136,7 +144,58 @@ class HomeShell extends ConsumerWidget {
       ),
     );
   }
+
+  Widget _buildPage(int index, WidgetRef ref) {
+    switch (index) {
+      case 0:
+        return HomeScreen(
+          onOpenScan: () => ref.read(navigationTabProvider.notifier).setTab(2),
+        );
+      case 1:
+        return const WeeklyPlannerScreen();
+      case 2:
+        return const ScannerScreen();
+      case 3:
+        return const JourneyScreen();
+      case 4:
+        return const ProfileScreen();
+      default:
+        return HomeScreen(
+          onOpenScan: () => ref.read(navigationTabProvider.notifier).setTab(2),
+        );
+    }
+  }
 }
+
+final _activityTrackingBootstrapProvider = FutureProvider<void>((ref) async {
+  await ref.read(activityTrackingServiceProvider).start();
+});
+
+final _healthSyncBootstrapProvider = FutureProvider<void>((ref) async {
+  await ref.read(healthSyncServiceProvider).syncToday();
+});
+
+final _offlineSyncBootstrapProvider = FutureProvider<void>((ref) async {
+  await ref.read(offlineSyncServiceProvider).processQueue();
+});
+
+final _smartNotificationBootstrapProvider = FutureProvider<void>((ref) async {
+  final profile = ref.watch(userProfileProvider).asData?.value;
+  final summary = ref.watch(dailySummaryProvider).asData?.value;
+  final settings = ref.watch(appSettingsProvider).asData?.value;
+  final steps = ref.watch(todayStepsProvider).asData?.value;
+  final sleep = ref.watch(todaySleepProvider).asData?.value;
+  if (profile == null || summary == null || settings == null || !settings.notificationsEnabled) {
+    return;
+  }
+  await ref.read(notificationServiceProvider).scheduleContextualReminders(
+        profile: profile,
+        settings: settings,
+        summary: summary,
+        steps: steps,
+        sleep: sleep,
+      );
+});
 
 class _NavItem extends StatelessWidget {
   const _NavItem({

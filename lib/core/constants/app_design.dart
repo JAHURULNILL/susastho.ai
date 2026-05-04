@@ -76,9 +76,21 @@ class AppCardStyles {
       border: Border.all(color: borderColor),
       boxShadow: const [
         BoxShadow(
-          color: Color.fromRGBO(45, 106, 79, 0.08),
+          color: Color.fromRGBO(13, 44, 28, 0.05),
           offset: Offset(0, 2),
-          blurRadius: 12,
+          blurRadius: 6,
+          spreadRadius: 0,
+        ),
+        BoxShadow(
+          color: Color.fromRGBO(45, 106, 79, 0.09),
+          offset: Offset(0, 10),
+          blurRadius: 24,
+          spreadRadius: -6,
+        ),
+        BoxShadow(
+          color: Color.fromRGBO(255, 255, 255, 0.65),
+          offset: Offset(0, 1),
+          blurRadius: 0,
         ),
       ],
     );

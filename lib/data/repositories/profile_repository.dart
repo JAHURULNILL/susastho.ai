@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -15,6 +17,7 @@ class ProfileRepository {
   final LocalStorageService _storage;
   final FirebaseAuth? _auth;
   final FirebaseFirestore? _firestore;
+  static const _sharedCacheKey = 'user_profile_last';
 
   DocumentReference<Map<String, dynamic>>? get _profileRef {
     final uid = _auth?.currentUser?.uid;
@@ -34,46 +37,67 @@ class ProfileRepository {
   }
 
   Future<UserProfile?> loadProfile() async {
+    final key = _cacheKey;
+    if (key != null) {
+      final cached = await _storage.readJson(key);
+      if (cached != null) {
+        unawaited(_refreshFromRemote(key));
+        return UserProfile.fromJson(cached);
+      }
+    }
+
+    final sharedCached = await _storage.readJson(_sharedCacheKey);
+    if (sharedCached != null) {
+      return UserProfile.fromJson(sharedCached);
+    }
+
     final ref = _profileRef;
     if (ref == null) {
       return null;
     }
 
     try {
-      final snapshot = await ref.get();
+      final snapshot = await ref.get(const GetOptions(source: Source.serverAndCache));
       final data = snapshot.data();
       if (data == null) {
         return null;
       }
 
       final profile = UserProfile.fromJson(data);
-      final key = _cacheKey;
       if (key != null) {
         await _storage.saveJson(key, profile.toJson());
       }
+      await _storage.saveJson(_sharedCacheKey, profile.toJson());
       return profile;
     } catch (_) {
-      final key = _cacheKey;
       if (key == null) {
-        return null;
+        final fallback = await _storage.readJson(_sharedCacheKey);
+        return fallback == null ? null : UserProfile.fromJson(fallback);
       }
       final cached = await _storage.readJson(key);
-      return cached == null ? null : UserProfile.fromJson(cached);
+      if (cached != null) {
+        return UserProfile.fromJson(cached);
+      }
+      final fallback = await _storage.readJson(_sharedCacheKey);
+      return fallback == null ? null : UserProfile.fromJson(fallback);
     }
   }
 
   Future<void> saveProfile(UserProfile profile) async {
+    await _ensureSignedIn();
     final key = _cacheKey;
     if (key != null) {
       await _storage.saveJson(key, profile.toJson());
     }
+    await _storage.saveJson(_sharedCacheKey, profile.toJson());
 
     final ref = _profileRef;
     if (ref == null) {
       return;
     }
 
-    final bmr = (10 * profile.weightKg) + (6.25 * profile.heightCm) - (5 * profile.age) + 5;
+    final genderAdjustment = profile.gender == UserGender.female ? -161 : 5;
+    final bmr = (10 * profile.weightKg) + (6.25 * profile.heightCm) - (5 * profile.age) + genderAdjustment;
     final weekKey = _formatDate(_startOfWeek(DateTime.now()));
     final notesRef = ref.collection('doctor_notes');
     final mealPlanRef = ref.collection('meal_plans').doc(weekKey);
@@ -133,6 +157,7 @@ class ProfileRepository {
     if (key != null) {
       await _storage.remove(key);
     }
+    await _storage.remove(_sharedCacheKey);
 
     final ref = _profileRef;
     if (ref == null) {
@@ -140,6 +165,33 @@ class ProfileRepository {
     }
 
     await ref.delete();
+  }
+
+  Future<void> _refreshFromRemote(String key) async {
+    final ref = _profileRef;
+    if (ref == null) {
+      return;
+    }
+
+    try {
+      final snapshot = await ref.get(const GetOptions(source: Source.serverAndCache));
+      final data = snapshot.data();
+      if (data == null) {
+        return;
+      }
+      final profile = UserProfile.fromJson(data);
+      await _storage.saveJson(key, profile.toJson());
+    } catch (_) {}
+  }
+
+  Future<void> _ensureSignedIn() async {
+    final auth = _auth;
+    if (auth == null || auth.currentUser != null) {
+      return;
+    }
+    try {
+      await auth.signInAnonymously().timeout(const Duration(seconds: 8));
+    } catch (_) {}
   }
 
   String _formatDate(DateTime date) {
