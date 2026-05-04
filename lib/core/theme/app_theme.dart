@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../constants/app_colors.dart';
+import '../constants/app_design.dart';
 
 class AppTheme {
   const AppTheme._();
@@ -10,52 +11,26 @@ class AppTheme {
     final base = ThemeData(
       colorScheme: ColorScheme.fromSeed(seedColor: AppColors.primary).copyWith(
         primary: AppColors.primary,
-        surface: AppColors.surface,
+        secondary: AppColors.primaryLight,
+        surface: AppColors.white,
       ),
-      scaffoldBackgroundColor: AppColors.background,
+      scaffoldBackgroundColor: AppColors.pageBg,
       useMaterial3: true,
     );
 
     final textTheme = TextTheme(
-      headlineLarge: GoogleFonts.hindSiliguri(
-        fontSize: 28,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      headlineMedium: GoogleFonts.hindSiliguri(
-        fontSize: 24,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      headlineSmall: GoogleFonts.hindSiliguri(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      titleLarge: GoogleFonts.hindSiliguri(
-        fontSize: 20,
-        fontWeight: FontWeight.w700,
-        color: AppColors.textPrimary,
-      ),
-      titleMedium: GoogleFonts.notoSansBengali(
-        fontSize: 16,
-        fontWeight: FontWeight.w600,
-        color: AppColors.textPrimary,
-      ),
-      bodyLarge: GoogleFonts.notoSansBengali(
-        fontSize: 14,
-        height: 1.55,
-        color: AppColors.textPrimary,
-      ),
-      bodyMedium: GoogleFonts.notoSansBengali(
-        fontSize: 12.5,
-        height: 1.45,
-        color: AppColors.textSecondary,
-      ),
+      headlineLarge: AppTextStyles.screenTitle.copyWith(fontSize: 28),
+      headlineMedium: AppTextStyles.screenTitle,
+      headlineSmall: AppTextStyles.cardTitle.copyWith(fontSize: 20),
+      titleLarge: AppTextStyles.cardTitle,
+      titleMedium: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+      bodyLarge: AppTextStyles.bodyLarge,
+      bodyMedium: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+      bodySmall: AppTextStyles.caption,
       labelLarge: GoogleFonts.notoSansBengali(
         fontSize: 14,
         fontWeight: FontWeight.w700,
-        color: Colors.white,
+        color: AppColors.white,
       ),
     );
 
@@ -66,13 +41,12 @@ class AppTheme {
         elevation: 0,
         centerTitle: false,
         foregroundColor: AppColors.textPrimary,
-        titleTextStyle: textTheme.titleLarge,
+        titleTextStyle: AppTextStyles.screenTitle.copyWith(fontSize: 24),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
+        color: AppColors.white,
         elevation: 0,
         margin: EdgeInsets.zero,
-        shadowColor: AppColors.primaryMid.withValues(alpha: 0.08),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
           side: const BorderSide(color: AppColors.border),
@@ -80,36 +54,54 @@ class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.primary,
+        contentTextStyle: AppTextStyles.body.copyWith(color: AppColors.white),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: AppColors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        hintStyle: GoogleFonts.notoSansBengali(
-          color: AppColors.textMuted,
-          fontSize: 14,
-        ),
+        hintStyle: AppTextStyles.body.copyWith(color: AppColors.textMuted),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(color: AppColors.border),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(color: AppColors.primaryDark, width: 1.2),
+          borderRadius: BorderRadius.circular(14),
+          borderSide: const BorderSide(color: AppColors.primaryLight, width: 1.3),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: AppColors.primaryDark,
-          foregroundColor: Colors.white,
+          backgroundColor: AppColors.primary,
+          foregroundColor: AppColors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+          textStyle: AppTextStyles.bodyLarge.copyWith(
+            color: AppColors.white,
+            fontWeight: FontWeight.w700,
+          ),
         ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          side: const BorderSide(color: AppColors.primary),
+          foregroundColor: AppColors.primary,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w700),
+        ),
+      ),
+      dividerColor: AppColors.border,
+      listTileTheme: ListTileThemeData(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+        titleTextStyle: AppTextStyles.bodyLarge,
+        subtitleTextStyle: AppTextStyles.caption,
       ),
     );
   }

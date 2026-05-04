@@ -45,6 +45,9 @@ class FoodAnalysisResult {
     this.fiber,
     this.vitamins = const [],
     this.minerals = const [],
+    this.plateBreakdown = const [],
+    this.redFlags = const [],
+    this.doctorTip,
     this.modelId,
     this.modelName,
     this.modelVersion,
@@ -63,13 +66,15 @@ class FoodAnalysisResult {
   final double? fiber;
   final List<String> vitamins;
   final List<String> minerals;
+  final List<String> plateBreakdown;
+  final List<String> redFlags;
+  final String? doctorTip;
   final String? modelId;
   final String? modelName;
   final String? modelVersion;
 
   factory FoodAnalysisResult.fromJson(Map<String, dynamic> json) {
     final model = json['model'] as Map<String, dynamic>?;
-
     return FoodAnalysisResult(
       foodName: json['foodName'] as String? ?? json['name'] as String? ?? 'অজানা খাবার',
       macros: NutritionMacro.fromJson(json['macros'] as Map<String, dynamic>? ?? json),
@@ -88,9 +93,43 @@ class FoodAnalysisResult {
       fiber: (json['fiber'] as num?)?.toDouble(),
       vitamins: ((json['vitamins'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
       minerals: ((json['minerals'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
+      plateBreakdown: ((json['plateBreakdown'] as List<dynamic>?) ?? json['plate_breakdown'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      redFlags: ((json['redFlags'] as List<dynamic>?) ?? json['red_flags'] as List<dynamic>? ?? [])
+          .map((e) => e.toString())
+          .toList(),
+      doctorTip: json['doctorTip'] as String? ?? json['doctor_tip'] as String?,
       modelId: model?['id'] as String?,
       modelName: model?['name'] as String?,
       modelVersion: model?['version'] as String?,
     );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'foodName': foodName,
+      'macros': macros.toJson(),
+      'pros': pros,
+      'warnings': warnings,
+      'summary': summary,
+      'healthScore': healthScore,
+      'conditionAdvice': conditionAdvice,
+      'timingAdvice': timingAdvice,
+      'portionAdvice': portionAdvice,
+      'alternative': alternative,
+      'fiber': fiber,
+      'vitamins': vitamins,
+      'minerals': minerals,
+      'plateBreakdown': plateBreakdown,
+      'redFlags': redFlags,
+      'doctorTip': doctorTip,
+      if (modelId != null || modelName != null || modelVersion != null)
+        'model': {
+          'id': modelId,
+          'name': modelName,
+          'version': modelVersion,
+        },
+    };
   }
 }

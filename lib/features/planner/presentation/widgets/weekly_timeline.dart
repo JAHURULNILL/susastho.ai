@@ -46,10 +46,10 @@ class WeeklyTimeline extends StatelessWidget {
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.dayTitle, style: Theme.of(context).textTheme.titleMedium),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                        Text(item.dateKey, style: Theme.of(context).textTheme.titleMedium),
                         const SizedBox(height: 8),
                         Text(item.exerciseTitle, style: Theme.of(context).textTheme.titleLarge),
                         const SizedBox(height: 8),

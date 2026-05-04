@@ -29,12 +29,18 @@ extension UserGoalX on UserGoal {
         UserGoal.maintenance => 'ওজন ঠিক রাখা',
       };
 
-  String get key => name;
+  String get key => switch (this) {
+        UserGoal.weightLoss => 'weightLoss',
+        UserGoal.weightGain => 'weightGain',
+        UserGoal.maintenance => 'maintenance',
+      };
 
-  static UserGoal fromKey(String value) => UserGoal.values.firstWhere(
-        (goal) => goal.name == value,
-        orElse: () => UserGoal.maintenance,
-      );
+  static UserGoal fromKey(String value) => switch (value) {
+        'weightLoss' => UserGoal.weightLoss,
+        'weightGain' => UserGoal.weightGain,
+        'maintenance' => UserGoal.maintenance,
+        _ => UserGoal.maintenance,
+      };
 }
 
 extension HealthConditionX on HealthCondition {
@@ -54,12 +60,38 @@ extension HealthConditionX on HealthCondition {
         HealthCondition.insomnia => 'ঘুমের সমস্যা',
       };
 
-  String get key => name;
+  String get key => switch (this) {
+        HealthCondition.diabetes => 'diabetes',
+        HealthCondition.heartDisease => 'heartDisease',
+        HealthCondition.hypertension => 'hypertension',
+        HealthCondition.underweight => 'underweight',
+        HealthCondition.obesity => 'obesity',
+        HealthCondition.bellyFat => 'bellyFat',
+        HealthCondition.ed => 'ed',
+        HealthCondition.prematureEjaculation => 'prematureEjaculation',
+        HealthCondition.urinaryIssues => 'urinaryIssues',
+        HealthCondition.fattyLiver => 'fattyLiver',
+        HealthCondition.kidneyIssues => 'kidneyIssues',
+        HealthCondition.digestiveIssues => 'digestiveIssues',
+        HealthCondition.insomnia => 'insomnia',
+      };
 
-  static HealthCondition fromKey(String value) => HealthCondition.values.firstWhere(
-        (condition) => condition.name == value,
-        orElse: () => HealthCondition.diabetes,
-      );
+  static HealthCondition fromKey(String value) => switch (value) {
+        'diabetes' => HealthCondition.diabetes,
+        'heartDisease' => HealthCondition.heartDisease,
+        'hypertension' => HealthCondition.hypertension,
+        'underweight' => HealthCondition.underweight,
+        'obesity' => HealthCondition.obesity,
+        'bellyFat' => HealthCondition.bellyFat,
+        'ed' => HealthCondition.ed,
+        'prematureEjaculation' => HealthCondition.prematureEjaculation,
+        'urinaryIssues' => HealthCondition.urinaryIssues,
+        'fattyLiver' => HealthCondition.fattyLiver,
+        'kidneyIssues' => HealthCondition.kidneyIssues,
+        'digestiveIssues' => HealthCondition.digestiveIssues,
+        'insomnia' => HealthCondition.insomnia,
+        _ => HealthCondition.diabetes,
+      };
 }
 
 class UserProfile {
@@ -118,7 +150,7 @@ class UserProfile {
       age: (json['age'] as num?)?.toInt() ?? 0,
       weightKg: (json['weightKg'] as num?)?.toDouble() ?? 0,
       heightCm: (json['heightCm'] as num?)?.toDouble() ?? 0,
-      goal: UserGoalX.fromKey(json['goal'] as String? ?? UserGoal.maintenance.name),
+      goal: UserGoalX.fromKey(json['goal'] as String? ?? UserGoal.maintenance.key),
       conditions: ((json['conditions'] as List<dynamic>?) ?? [])
           .map((item) => HealthConditionX.fromKey(item as String))
           .toList(),

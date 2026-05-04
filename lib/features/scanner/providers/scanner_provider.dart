@@ -57,7 +57,12 @@ class ScannerNotifier extends Notifier<ScannerState> {
       return;
     }
 
-    final file = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+    final file = await _picker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 80,
+      maxWidth: 800,
+      maxHeight: 800,
+    );
     if (file == null) {
       return;
     }

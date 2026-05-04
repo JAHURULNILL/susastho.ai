@@ -10,6 +10,25 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   Object? startupError;
 
+  ErrorWidget.builder = (FlutterErrorDetails details) {
+    return Material(
+      color: Colors.white,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Text(
+            'Render error:\n${details.exceptionAsString()}',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              color: Colors.red,
+              fontSize: 14,
+            ),
+          ),
+        ),
+      ),
+    );
+  };
+
   try {
     await FirebaseBootstrapService.initialize();
     final notifications = NotificationService(FlutterLocalNotificationsPlugin());

@@ -6,11 +6,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../data/models/app_settings.dart';
+import '../../data/models/health_metrics.dart';
+import '../../data/repositories/doctor_note_repository.dart';
 import '../../data/repositories/daily_summary_repository.dart';
 import '../../data/models/user_profile.dart';
 import '../../data/repositories/app_settings_repository.dart';
+import '../../data/repositories/health_metrics_repository.dart';
+import '../../data/repositories/planner_repository.dart';
 import '../../data/repositories/profile_repository.dart';
-import '../../data/services/daily_advice_service.dart';
+import '../../data/services/ai_backend_service.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../data/services/notification_service.dart';
 
@@ -51,13 +55,48 @@ final profileRepositoryProvider = Provider<ProfileRepository>((ref) {
 });
 
 final dailySummaryRepositoryProvider = Provider<DailySummaryRepository>((ref) {
-  final storage = ref.watch(localStorageServiceProvider);
-  return DailySummaryRepository(storage);
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  return DailySummaryRepository(
+    auth: auth,
+    firestore: firestore,
+  );
 });
 
 final appSettingsRepositoryProvider = Provider<AppSettingsRepository>((ref) {
   final storage = ref.watch(localStorageServiceProvider);
   return AppSettingsRepository(storage);
+});
+
+final healthMetricsRepositoryProvider = Provider<HealthMetricsRepository>((ref) {
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  return HealthMetricsRepository(
+    auth: auth,
+    firestore: firestore,
+  );
+});
+
+final plannerRepositoryProvider = Provider<PlannerRepository>((ref) {
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  final aiBackendService = ref.watch(aiBackendServiceProvider);
+  return PlannerRepository(
+    auth: auth,
+    firestore: firestore,
+    aiBackendService: aiBackendService,
+  );
+});
+
+final doctorNoteRepositoryProvider = Provider<DoctorNoteRepository>((ref) {
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  final aiBackendService = ref.watch(aiBackendServiceProvider);
+  return DoctorNoteRepository(
+    auth: auth,
+    firestore: firestore,
+    aiBackendService: aiBackendService,
+  );
 });
 
 final notificationPluginProvider = Provider<FlutterLocalNotificationsPlugin>((ref) {
@@ -67,10 +106,6 @@ final notificationPluginProvider = Provider<FlutterLocalNotificationsPlugin>((re
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   final plugin = ref.watch(notificationPluginProvider);
   return NotificationService(plugin);
-});
-
-final dailyAdviceServiceProvider = Provider<DailyAdviceService>((ref) {
-  return const DailyAdviceService();
 });
 
 class UserProfileNotifier extends AsyncNotifier<UserProfile?> {
@@ -120,3 +155,15 @@ class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
 final appSettingsProvider = AsyncNotifierProvider<AppSettingsNotifier, AppSettings>(
   AppSettingsNotifier.new,
 );
+
+final todaySleepProvider = StreamProvider<SleepLogRecord?>((ref) {
+  return ref.read(healthMetricsRepositoryProvider).watchTodaySleep();
+});
+
+final todayStepsProvider = StreamProvider<StepLogRecord?>((ref) {
+  return ref.read(healthMetricsRepositoryProvider).watchTodaySteps();
+});
+
+final weightHistoryProvider = StreamProvider<List<WeightHistoryEntry>>((ref) {
+  return ref.read(healthMetricsRepositoryProvider).watchWeightHistory();
+});

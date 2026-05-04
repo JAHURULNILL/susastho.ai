@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'food_analysis_result.dart';
 
 enum MealSlot {
@@ -22,6 +24,13 @@ extension MealSlotX on MealSlot {
         MealSlot.dinner => '🌙',
       };
 
+  String get key => switch (this) {
+        MealSlot.morning => 'morning',
+        MealSlot.lunch => 'lunch',
+        MealSlot.snack => 'snack',
+        MealSlot.dinner => 'dinner',
+      };
+
   static MealSlot fromHour(int hour) {
     if (hour < 11) {
       return MealSlot.morning;
@@ -35,10 +44,13 @@ extension MealSlotX on MealSlot {
     return MealSlot.dinner;
   }
 
-  static MealSlot fromKey(String value) => MealSlot.values.firstWhere(
-        (slot) => slot.name == value,
-        orElse: () => MealSlot.morning,
-      );
+  static MealSlot fromKey(String value) => switch (value) {
+        'morning' => MealSlot.morning,
+        'lunch' => MealSlot.lunch,
+        'snack' => MealSlot.snack,
+        'dinner' => MealSlot.dinner,
+        _ => MealSlot.morning,
+      };
 }
 
 class MealLogEntry {
@@ -85,7 +97,7 @@ class MealLogEntry {
       'id': id,
       'foodName': foodName,
       'loggedAt': loggedAt.toIso8601String(),
-      'slot': slot.name,
+      'slot': slot.key,
       'macros': macros.toJson(),
       'summary': summary,
       'healthScore': healthScore,
@@ -98,7 +110,28 @@ class MealLogEntry {
       id: json['id'] as String? ?? '',
       foodName: json['foodName'] as String? ?? '',
       loggedAt: DateTime.tryParse(json['loggedAt'] as String? ?? '') ?? DateTime.now(),
-      slot: MealSlotX.fromKey(json['slot'] as String? ?? MealSlot.morning.name),
+      slot: MealSlotX.fromKey(json['slot'] as String? ?? MealSlot.morning.key),
+      macros: NutritionMacro.fromJson(Map<String, dynamic>.from(json['macros'] as Map? ?? {})),
+      summary: json['summary'] as String? ?? '',
+      healthScore: (json['healthScore'] as num?)?.toInt() ?? 0,
+      imagePath: json['imagePath'] as String?,
+    );
+  }
+
+  factory MealLogEntry.fromFirestore(String id, Map<String, dynamic> json) {
+    final rawLoggedAt = json['loggedAt'];
+    DateTime loggedAt;
+    if (rawLoggedAt is Timestamp) {
+      loggedAt = rawLoggedAt.toDate();
+    } else {
+      loggedAt = DateTime.tryParse(rawLoggedAt as String? ?? '') ?? DateTime.now();
+    }
+
+    return MealLogEntry(
+      id: id,
+      foodName: json['foodName'] as String? ?? '',
+      loggedAt: loggedAt,
+      slot: MealSlotX.fromKey(json['slot'] as String? ?? MealSlot.morning.key),
       macros: NutritionMacro.fromJson(Map<String, dynamic>.from(json['macros'] as Map? ?? {})),
       summary: json['summary'] as String? ?? '',
       healthScore: (json['healthScore'] as num?)?.toInt() ?? 0,
@@ -121,11 +154,11 @@ class DailySummary {
   NutritionMacro get consumedMacros {
     return meals.fold(
       const NutritionMacro(calories: 0, protein: 0, carbs: 0, fat: 0),
-      (sum, meal) => NutritionMacro(
-        calories: sum.calories + meal.macros.calories,
-        protein: sum.protein + meal.macros.protein,
-        carbs: sum.carbs + meal.macros.carbs,
-        fat: sum.fat + meal.macros.fat,
+      (total, meal) => NutritionMacro(
+        calories: total.calories + meal.macros.calories,
+        protein: total.protein + meal.macros.protein,
+        carbs: total.carbs + meal.macros.carbs,
+        fat: total.fat + meal.macros.fat,
       ),
     );
   }

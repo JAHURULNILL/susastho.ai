@@ -51,13 +51,13 @@ module.exports = async function handler(req, res) {
           system_instruction: {
             parts: [
               {
-                text: 'আপনি একজন বিশেষজ্ঞ বাংলাদেশি পুষ্টিবিদ। সব উত্তর বাংলায় দেবেন এবং শুধু JSON schema অনুসরণ করবেন।',
+                text: 'আপনি একজন বিশেষজ্ঞ বাংলাদেশি পুষ্টিবিদ ও AI health guide। সব উত্তর বাংলায় দেবেন এবং শুধু valid JSON schema অনুসরণ করবেন।',
               },
             ],
           },
           contents: [{ parts: contentParts }],
           generationConfig: {
-            temperature: 0.2,
+            temperature: 0.25,
             response_mime_type: 'application/json',
           },
         }),
@@ -92,34 +92,44 @@ function buildNutritionPrompt(profile, description, consumedCalories, remainingC
 
   return `
 তুমি একজন বিশেষজ্ঞ বাংলাদেশি পুষ্টিবিদ।
-ইউজারের তথ্য:
+
+এই user-এর তথ্য:
 - নাম: ${profile.name}
 - বয়স: ${profile.age}
 - ওজন: ${profile.weightKg}kg
 - উচ্চতা: ${profile.heightCm}cm
+- লক্ষ্য: ${profile.goal}
 - স্বাস্থ্য সমস্যা: ${conditions}
-- দৈনিক লক্ষ্য: ${profile.goal}
-- এখন পর্যন্ত খেয়েছে: ${consumedCalories ?? 0} kcal
-- বাকি আছে: ${remainingCalories ?? 'অজানা'} kcal
+- আজ এখন পর্যন্ত খেয়েছে: ${consumedCalories ?? 0} kcal
+- আজ বাকি আছে: ${remainingCalories ?? 'অজানা'} kcal
 
-${description ? `ইউজার লিখেছে: "${description}"` : 'ছবিতে দেখা খাবার বিশ্লেষণ করো।'}
+${description ? `User লিখেছে: "${description}"` : 'ছবির খাবার বিশ্লেষণ করো।'}
 
-শুধু JSON দাও:
+গুরুত্বপূর্ণ:
+1. যদি খাবারটি mixed Bangladeshi plate হয়, তাহলে ভাত, ডাল, মাছ, ভাজি, শাক, মাংস, সালাদ ইত্যাদি আলাদা করে reasoning দাও।
+2. user-এর condition অনুযায়ী instant red flag থাকলে সেটা red_flags এ দাও।
+3. advice এমন হতে হবে যেন personal doctor-এর মতো practical হয়।
+4. data uncertain হলে reasonable estimate দাও, কিন্তু confident clinical tone রেখো।
+
+শুধু valid JSON দাও:
 {
-  "name": "খাবারের নাম (বাংলায়)",
+  "name": "খাবারের নাম",
   "calories": 0,
   "protein": 0,
   "carbs": 0,
   "fat": 0,
   "fiber": 0,
   "vitamins": ["ভিটামিন A"],
-  "minerals": ["আয়রন"],
+  "minerals": ["আয়রন"],
   "score": 85,
-  "score_reason": "কেন এই স্কোর",
+  "score_reason": "সংক্ষিপ্ত ব্যাখ্যা",
   "benefits": ["উপকার ১", "উপকার ২"],
   "harms": ["সতর্কতা ১"],
-  "condition_advice": "ইউজারের সমস্যার জন্য নির্দিষ্ট পরামর্শ",
-  "timing_advice": "দিনের কোন সময়ে ভালো",
+  "red_flags": ["condition-specific instant warning"],
+  "plate_breakdown": ["প্লেটের অংশ ১", "প্লেটের অংশ ২"],
+  "condition_advice": "এই user-এর সমস্যার জন্য advice",
+  "doctor_tip": "খাওয়ার পর doctor-style ছোট practical tip",
+  "timing_advice": "দিনের কোন সময় উপযুক্ত",
   "portion_advice": "কতটুকু খাওয়া উচিত",
   "alternative": "আরও স্বাস্থ্যকর দেশীয় বিকল্প",
   "remaining_after": 0

@@ -4,9 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
+import '../../../../core/constants/app_design.dart';
 import '../../../../core/utils/bengali_formatters.dart';
+import '../../../../core/widgets/info_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../data/models/food_analysis_result.dart';
+import '../../../home/presentation/screens/home_shell.dart';
 import '../../../home/providers/home_provider.dart';
 
 class FoodResultBottomSheet extends ConsumerWidget {
@@ -22,114 +25,208 @@ class FoodResultBottomSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final image = imagePath == null ? null : File(imagePath!);
+    final scoreColor = _scoreColor;
+    final scoreBackground = _scoreBackground;
 
     return SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (image != null && image.existsSync()) ...[
-              ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: Image.file(
-                  image,
-                  width: double.infinity,
-                  height: 190,
-                  fit: BoxFit.cover,
+      child: Container(
+        decoration: const BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (image != null && image.existsSync()) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(16),
+                  child: Image.file(
+                    image,
+                    width: double.infinity,
+                    height: 220,
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 18),
-            ],
-            Text(result.foodName, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: _scoreColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                'স্বাস্থ্য স্কোর: ${BengaliFormatters.toBengaliNumber(result.healthScore)}/১০০',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: _scoreColor,
+                const SizedBox(height: 16),
+              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(result.foodName, style: AppTextStyles.screenTitle),
+                        const SizedBox(height: 4),
+                        Text('AI বিশ্লেষণ • এইমাত্র', style: AppTextStyles.caption),
+                      ],
                     ),
+                  ),
+                  const SizedBox(width: 12),
+                  Column(
+                    children: [
+                      Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: scoreBackground,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: scoreColor, width: 2),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          BengaliFormatters.toBengaliNumber(result.healthScore),
+                          style: AppTextStyles.bodyLarge.copyWith(
+                            color: scoreColor,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text('স্বাস্থ্য স্কোর', style: AppTextStyles.caption),
+                    ],
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(height: 18),
-            _SectionTitle(title: 'পুষ্টিমান'),
-            const SizedBox(height: 10),
-            GridView.count(
-              physics: const NeverScrollableScrollPhysics(),
-              shrinkWrap: true,
-              crossAxisCount: 2,
-              childAspectRatio: 1.6,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              children: [
-                _MacroCard(label: 'ক্যালরি', value: '${result.macros.calories.round()}kcal', color: AppColors.primaryPale),
-                _MacroCard(label: 'প্রোটিন', value: '${result.macros.protein.toStringAsFixed(1)}g', color: const Color(0xFFEAF0FF)),
-                _MacroCard(label: 'কার্বস', value: '${result.macros.carbs.toStringAsFixed(1)}g', color: AppColors.primaryFaint),
-                _MacroCard(label: 'ফ্যাট', value: '${result.macros.fat.toStringAsFixed(1)}g', color: AppColors.warningPale),
-              ],
-            ),
-            if (result.fiber != null || result.vitamins.isNotEmpty || result.minerals.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              GridView.count(
+                physics: const NeverScrollableScrollPhysics(),
+                shrinkWrap: true,
+                crossAxisCount: 2,
+                childAspectRatio: 1.8,
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                children: [
+                  _MacroCell(label: 'ক্যালরি', value: '${result.macros.calories.round()}', unit: 'kcal', background: AppColors.primaryPale, accent: AppColors.primary),
+                  _MacroCell(label: 'প্রোটিন', value: result.macros.protein.toStringAsFixed(1), unit: 'g', background: AppColors.bluePale, accent: AppColors.blue),
+                  _MacroCell(label: 'কার্বস', value: result.macros.carbs.toStringAsFixed(1), unit: 'g', background: AppColors.primaryFaint, accent: AppColors.primaryLight),
+                  _MacroCell(label: 'ফ্যাট', value: result.macros.fat.toStringAsFixed(1), unit: 'g', background: AppColors.amberPale, accent: AppColors.amber),
+                ],
+              ),
               const SizedBox(height: 18),
-              _SectionTitle(title: 'অতিরিক্ত পুষ্টি'),
-              const SizedBox(height: 8),
-              if (result.fiber != null) Text('ফাইবার: ${result.fiber!.toStringAsFixed(1)}g'),
-              if (result.vitamins.isNotEmpty) Text('ভিটামিন: ${result.vitamins.join(', ')}'),
-              if (result.minerals.isNotEmpty) Text('মিনারেল: ${result.minerals.join(', ')}'),
-            ],
-            const SizedBox(height: 18),
-            _SectionTitle(title: 'আপনার জন্য ভালো দিক', color: AppColors.success),
-            const SizedBox(height: 8),
-            ...result.pros.map((item) => _InsightTile(text: item, color: AppColors.success)),
-            const SizedBox(height: 14),
-            _SectionTitle(title: 'সতর্কতা', color: AppColors.warning),
-            const SizedBox(height: 8),
-            ...result.warnings.map((item) => _InsightTile(text: item, color: AppColors.warning)),
-            if ((result.conditionAdvice ?? '').isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _SectionTitle(title: 'আপনার সমস্যা অনুযায়ী পরামর্শ'),
-              const SizedBox(height: 8),
-              _AdviceCard(text: result.conditionAdvice!),
-            ],
-            if ((result.timingAdvice ?? '').isNotEmpty || (result.portionAdvice ?? '').isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _SectionTitle(title: 'কখন ও কতটুকু'),
-              const SizedBox(height: 8),
-              if ((result.timingAdvice ?? '').isNotEmpty) _AdviceCard(text: result.timingAdvice!),
-              if ((result.portionAdvice ?? '').isNotEmpty) ...[
-                const SizedBox(height: 8),
-                _AdviceCard(text: result.portionAdvice!),
+              const Divider(height: 1, color: AppColors.border),
+              const SizedBox(height: 18),
+              Text('✅ উপকারিতা', style: AppTextStyles.cardTitle),
+              const SizedBox(height: 10),
+              ...result.pros.map((item) => _LineItem(text: item, color: AppColors.primary)),
+              if (result.warnings.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('⚠️ সতর্কতা', style: AppTextStyles.cardTitle),
+                const SizedBox(height: 10),
+                ...result.warnings.map((item) => _LineItem(text: item, color: AppColors.red)),
               ],
-            ],
-            if ((result.alternative ?? '').isNotEmpty) ...[
-              const SizedBox(height: 14),
-              _SectionTitle(title: 'স্বাস্থ্যকর বিকল্প'),
-              const SizedBox(height: 8),
-              _AdviceCard(text: result.alternative!),
-            ],
-            const SizedBox(height: 18),
-            PrimaryButton(
-              label: '+ আজকের খাবারে যোগ করুন',
-              icon: Icons.add_circle_outline_rounded,
-              onPressed: () async {
-                await ref.read(dailySummaryProvider.notifier).addMeal(
-                      result,
-                      imagePath: imagePath,
+              if (result.redFlags.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                InfoCard(
+                  backgroundColor: AppColors.redPale,
+                  borderColor: AppColors.red,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🚨 রিয়েল-টাইম রেড ফ্ল্যাগ', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+                      const SizedBox(height: 8),
+                      ...result.redFlags.map((item) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Text(item, style: AppTextStyles.body.copyWith(color: AppColors.red)),
+                          )),
+                    ],
+                  ),
+                ),
+              ],
+              if (result.plateBreakdown.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('🍽️ মিক্সড-প্লেট বিশ্লেষণ', style: AppTextStyles.cardTitle),
+                const SizedBox(height: 10),
+                ...result.plateBreakdown.map((item) => _LineItem(text: item, color: AppColors.primaryMid)),
+              ],
+              if ((result.conditionAdvice ?? '').isNotEmpty) ...[
+                const SizedBox(height: 16),
+                InfoCard(
+                  backgroundColor: AppColors.amberPale,
+                  borderColor: AppColors.amber,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🎯 আপনার স্বাস্থ্য সমস্যা অনুযায়ী', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text(result.conditionAdvice!, style: AppTextStyles.body),
+                    ],
+                  ),
+                ),
+              ],
+              if ((result.alternative ?? '').isNotEmpty) ...[
+                const SizedBox(height: 16),
+                InfoCard(
+                  backgroundColor: AppColors.primaryFaint,
+                  borderColor: AppColors.primaryLight,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🌿 স্বাস্থ্যকর বিকল্প', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text(result.alternative!, style: AppTextStyles.body),
+                    ],
+                  ),
+                ),
+              ],
+              if ((result.doctorTip ?? '').isNotEmpty) ...[
+                const SizedBox(height: 16),
+                InfoCard(
+                  backgroundColor: AppColors.primaryFaint,
+                  borderColor: AppColors.primaryLight,
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('🩺 ডক্টর টিপ', style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+                      const SizedBox(height: 8),
+                      Text(result.doctorTip!, style: AppTextStyles.body),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 18),
+              PrimaryButton(
+                label: '+ আজকের খাবারে যোগ করুন',
+                icon: Icons.add_circle_outline_rounded,
+                onPressed: () async {
+                  await ref.read(dailySummaryProvider.notifier).addMeal(
+                        result,
+                        imagePath: imagePath,
+                      );
+                  ref.read(navigationTabProvider.notifier).setTab(0);
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        backgroundColor: AppColors.primary,
+                        duration: const Duration(seconds: 2),
+                        content: const Text('✓ খাবার লগে যোগ হয়েছে'),
+                      ),
                     );
-                if (context.mounted) {
-                  Navigator.of(context).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('আজকের খাবারের তালিকায় যোগ করা হয়েছে।')),
-                  );
-                }
-              },
-            ),
-          ],
+                    if (result.redFlags.isNotEmpty || result.healthScore < 55) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          backgroundColor: AppColors.red,
+                          content: Text(
+                            result.redFlags.isNotEmpty
+                                ? result.redFlags.first
+                                : 'এই খাবারটি আপনার শরীরের জন্য ভারী হতে পারে। আজ অন্তত ২০ মিনিট হাঁটার চেষ্টা করুন।',
+                          ),
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -137,67 +234,82 @@ class FoodResultBottomSheet extends ConsumerWidget {
 
   Color get _scoreColor {
     if (result.healthScore >= 80) {
-      return AppColors.success;
+      return AppColors.primary;
     }
     if (result.healthScore >= 50) {
-      return AppColors.warning;
+      return AppColors.amber;
     }
-    return AppColors.danger;
+    return AppColors.red;
+  }
+
+  Color get _scoreBackground {
+    if (result.healthScore >= 80) {
+      return AppColors.primaryPale;
+    }
+    if (result.healthScore >= 50) {
+      return AppColors.amberPale;
+    }
+    return AppColors.redPale;
   }
 }
 
-class _MacroCard extends StatelessWidget {
-  const _MacroCard({
+class _MacroCell extends StatelessWidget {
+  const _MacroCell({
     required this.label,
     required this.value,
-    required this.color,
+    required this.unit,
+    required this.background,
+    required this.accent,
   });
 
   final String label;
   final String value;
-  final Color color;
+  final String unit;
+  final Color background;
+  final Color accent;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color,
+        color: background,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: Theme.of(context).textTheme.bodyMedium),
+          Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
           const SizedBox(height: 6),
-          Text(value, style: Theme.of(context).textTheme.titleLarge),
+          RichText(
+            text: TextSpan(
+              children: [
+                TextSpan(
+                  text: value,
+                  style: AppTextStyles.metricSmall.copyWith(
+                    color: accent,
+                    fontSize: 24,
+                  ),
+                ),
+                TextSpan(
+                  text: ' $unit',
+                  style: AppTextStyles.body.copyWith(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _SectionTitle extends StatelessWidget {
-  const _SectionTitle({
-    required this.title,
-    this.color = AppColors.textPrimary,
-  });
-
-  final String title;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      title,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color),
-    );
-  }
-}
-
-class _InsightTile extends StatelessWidget {
-  const _InsightTile({
+class _LineItem extends StatelessWidget {
+  const _LineItem({
     required this.text,
     required this.color,
   });
@@ -210,34 +322,16 @@ class _InsightTile extends StatelessWidget {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.only(left: 12, top: 8, bottom: 8),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.09),
-        borderRadius: BorderRadius.circular(16),
+        border: Border(left: BorderSide(color: color, width: 3)),
       ),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.bodyLarge?.copyWith(color: color),
+        style: AppTextStyles.body.copyWith(
+          color: color == AppColors.red ? AppColors.red : AppColors.textPrimary,
+        ),
       ),
-    );
-  }
-}
-
-class _AdviceCard extends StatelessWidget {
-  const _AdviceCard({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.primaryFaint,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Text(text, style: Theme.of(context).textTheme.bodyLarge),
     );
   }
 }

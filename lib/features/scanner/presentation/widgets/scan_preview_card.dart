@@ -13,8 +13,8 @@ class ScanPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
       child: AspectRatio(
         aspectRatio: 4 / 3,
         child: Image.file(

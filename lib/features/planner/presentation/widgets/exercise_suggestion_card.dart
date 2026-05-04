@@ -18,7 +18,7 @@ class ExerciseSuggestionCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(item.dayTitle, style: Theme.of(context).textTheme.titleMedium),
+            Text(item.dateKey, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
             Text(item.exerciseTitle, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 8),

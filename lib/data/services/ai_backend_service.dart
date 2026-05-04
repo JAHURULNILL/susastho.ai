@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../core/constants/app_strings.dart';
 import '../models/food_analysis_result.dart';
 import '../models/user_profile.dart';
+import '../models/weekly_plan.dart';
 
 final aiBackendServiceProvider = Provider<AiBackendService>((ref) {
   return AiBackendService();
@@ -72,6 +73,75 @@ class AiBackendService {
     return FoodAnalysisResult.fromJson(analysis);
   }
 
+  Future<GeneratedDoctorNote> generateDoctorNote({
+    required UserProfile profile,
+    required dynamic summary,
+    required List<WeeklyExerciseItem> exercises,
+    required List<String> recentCategories,
+  }) async {
+    final completedExercises = exercises.where((item) => item.completed).toList();
+    final payload = <String, dynamic>{
+      'profile': profile.toJson(),
+      'recentCategories': recentCategories,
+      'todayData': {
+        'totalCal': summary.consumedMacros.calories.round(),
+        'totalProtein': summary.consumedMacros.protein,
+        'totalCarbs': summary.consumedMacros.carbs,
+        'totalFat': summary.consumedMacros.fat,
+        'waterLog': summary.waterGlasses,
+        'exerciseDone': completedExercises.length,
+        'burnedCal': completedExercises.fold<double>(0, (sum, item) => sum + item.caloriesBurned),
+        'remainCal': profile.dailyCalorieTarget - summary.consumedMacros.calories.round(),
+      },
+    };
+
+    final decoded = await _post('/api/doctor-note', payload);
+    return GeneratedDoctorNote(
+      content: decoded['content'] as String? ?? '',
+      category: decoded['category'] as String? ?? 'condition_specific',
+      contextSnapshot: Map<String, dynamic>.from(decoded['contextSnapshot'] as Map? ?? const {}),
+    );
+  }
+
+  Future<List<WeeklyExerciseItem>> generateExercisePlan({
+    required UserProfile profile,
+  }) async {
+    final decoded = await _post('/api/exercise-plan', {'profile': profile.toJson()});
+    final items = (decoded['items'] as List<dynamic>? ?? const []);
+    return items
+        .map((item) => WeeklyExerciseItem.fromJson('', Map<String, dynamic>.from(item as Map)))
+        .toList();
+  }
+
+  Future<WeeklyMealPlan> generateMealPlan({
+    required UserProfile profile,
+    required String weekOf,
+  }) async {
+    final decoded = await _post(
+      '/api/meal-plan',
+      {
+        'profile': profile.toJson(),
+        'weekOf': weekOf,
+      },
+    );
+    return WeeklyMealPlan.fromJson(Map<String, dynamic>.from(decoded['plan'] as Map? ?? const {}));
+  }
+
+  Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> payload) async {
+    final uri = Uri.parse('$_resolvedBaseUrl$path');
+    final response = await http.post(
+      uri,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode(payload),
+    );
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw Exception(response.body);
+    }
+
+    return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+  }
+
   String _detectMimeType(String path) {
     final lower = path.toLowerCase();
     if (lower.endsWith('.png')) {
@@ -82,4 +152,16 @@ class AiBackendService {
     }
     return 'image/jpeg';
   }
+}
+
+class GeneratedDoctorNote {
+  const GeneratedDoctorNote({
+    required this.content,
+    required this.category,
+    required this.contextSnapshot,
+  });
+
+  final String content;
+  final String category;
+  final Map<String, dynamic> contextSnapshot;
 }

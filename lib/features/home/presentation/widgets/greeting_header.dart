@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/widgets/info_card.dart';
+import '../../../../core/constants/app_design.dart';
 import '../../../../data/models/user_profile.dart';
 
 class GreetingHeader extends StatelessWidget {
@@ -15,51 +15,51 @@ class GreetingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat('dd MMMM, yyyy').format(DateTime.now());
+    final dateText = DateFormat('dd MMMM').format(DateTime.now());
+    final initial = profile.name.trim().isEmpty ? 'S' : profile.name.trim().characters.first.toUpperCase();
 
-    return InfoCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      profile.name,
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      dateText,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: AppColors.textMuted,
-                          ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                width: 54,
-                height: 54,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryPale,
-                  borderRadius: BorderRadius.circular(18),
-                ),
-                child: const Icon(Icons.person_rounded, color: AppColors.primaryDark),
+              Text('Today', style: AppTextStyles.caption.copyWith(letterSpacing: 0.2)),
+              const SizedBox(height: 4),
+              Text(profile.name, style: AppTextStyles.screenTitle.copyWith(fontSize: 30)),
+              const SizedBox(height: 4),
+              Text(dateText, style: AppTextStyles.caption),
+            ],
+          ),
+        ),
+        Container(
+          width: 54,
+          height: 54,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [AppColors.primary, AppColors.primaryLight],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+            boxShadow: const [
+              BoxShadow(
+                color: Color.fromRGBO(27, 94, 59, 0.18),
+                blurRadius: 12,
+                offset: Offset(0, 4),
               ),
             ],
           ),
-          const SizedBox(height: 14),
-          Text(
-            'আজকের লক্ষ্য, খাবার আর স্বাস্থ্য নজর এক জায়গায় সাজানো আছে।',
-            style: Theme.of(context).textTheme.bodyLarge,
+          alignment: Alignment.center,
+          child: Text(
+            initial,
+            style: AppTextStyles.metricSmall.copyWith(
+              color: AppColors.white,
+              fontSize: 24,
+            ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
