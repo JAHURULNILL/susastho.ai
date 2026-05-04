@@ -52,57 +52,80 @@ module.exports = async function handler(req, res) {
 };
 
 function buildDoctorNotePrompt(profile, todayData, recentCategories, historicalContext) {
-  const hour = new Date().getHours();
-  const dayOfWeek = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'][new Date().getDay()];
+  const now = new Date();
+  const hour = now.getHours();
+  const dayOfWeek = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'][now.getDay()];
   const timeOfDay = hour < 6 ? 'রাত' : hour < 12 ? 'সকাল' : hour < 17 ? 'দুপুর' : hour < 20 ? 'বিকাল' : 'রাত';
   const allCategories = [
-    'morning_routine', 'food_suggestion', 'water_reminder',
-    'exercise_tip', 'sleep_advice', 'meditation_stress',
-    'mental_health', 'lifestyle_habit', 'condition_specific',
-    'nutrition_fact', 'motivation', 'digestion',
-    'sexual_health', 'hormonal_health', 'posture_ergonomics',
-    'breathing_exercise', 'sunlight_vitamin_d',
-    'intermittent_fasting', 'gut_health', 'immune_system',
+    'morning_routine',
+    'food_suggestion',
+    'water_reminder',
+    'exercise_tip',
+    'sleep_advice',
+    'meditation_stress',
+    'mental_health',
+    'lifestyle_habit',
+    'condition_specific',
+    'nutrition_fact',
+    'motivation',
+    'digestion',
+    'sexual_health',
+    'hormonal_health',
+    'posture_ergonomics',
+    'breathing_exercise',
+    'sunlight_vitamin_d',
+    'intermittent_fasting',
+    'gut_health',
+    'immune_system',
   ];
 
   const timePriority = {
-    সকাল: ['morning_routine', 'food_suggestion', 'breathing_exercise'],
+    সকাল: ['morning_routine', 'food_suggestion', 'sunlight_vitamin_d'],
     দুপুর: ['food_suggestion', 'water_reminder', 'digestion'],
-    বিকাল: ['exercise_tip', 'water_reminder', 'nutrition_fact'],
+    বিকাল: ['exercise_tip', 'water_reminder', 'motivation'],
     রাত: ['sleep_advice', 'mental_health', 'meditation_stress'],
   };
 
   const prioritized = [...(timePriority[timeOfDay] || []), ...allCategories]
     .filter((item, index, arr) => arr.indexOf(item) === index);
   const category = prioritized.find((item) => !recentCategories.includes(item)) || prioritized[0];
+
   const bmi = profile.weightKg && profile.heightCm
     ? (profile.weightKg / ((profile.heightCm / 100) ** 2)).toFixed(1)
     : '0.0';
 
+  const conditions = Array.isArray(profile.conditions) && profile.conditions.length > 0
+    ? profile.conditions.join(', ')
+    : 'কোনো নির্দিষ্ট সমস্যা উল্লেখ নেই';
+
   return `
-তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ এবং মানসিক-স্বাস্থ্য সহচর।
+তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ, স্বাস্থ্য-সহচর এবং behaviour coach।
 এখন ${timeOfDay}, ${dayOfWeek}।
 
 ইউজারের তথ্য:
 - নাম: ${profile.name}
 - বয়স: ${profile.age}
+- লিঙ্গ: ${profile.gender || 'অজানা'}
 - ওজন: ${profile.weightKg}kg
 - উচ্চতা: ${profile.heightCm}cm
 - BMI: ${bmi}
 - লক্ষ্য: ${profile.goal}
-- স্বাস্থ্য সমস্যা: ${(profile.conditions || []).join(', ') || 'কোনো সমস্যা নেই'}
-- আজ খেয়েছে: ${todayData.totalCal || 0} kcal (লক্ষ্য ${profile.dailyCalorieTarget || 0} kcal)
-- পানি: ${todayData.waterLog || 0}/8 গ্লাস
-- ব্যায়াম: ${todayData.exerciseDone || 0}টি
+- স্বাস্থ্য সমস্যা: ${conditions}
+- আজ খেয়েছে: ${todayData.totalCal || 0} kcal
+- আজ প্রোটিন: ${todayData.totalProtein || 0} g
+- আজ পানি: ${todayData.waterLog || 0}/8 গ্লাস
+- আজ ব্যায়াম: ${todayData.exerciseDone || 0}টি
+- আজ পোড়া ক্যালরি: ${todayData.burnedCal || 0}
+- আজ বাকি ক্যালরি: ${todayData.remainCal || 0}
 
-গত কয়েক দিনের প্যাটার্ন:
-${JSON.stringify(historicalContext || {})}
+গত কয়েক দিনের বাস্তব pattern:
+${JSON.stringify(historicalContext || {}, null, 2)}
 
 পরামর্শের ধরন: ${category}
 
 শুধু valid JSON দাও:
 {
-  "content": "২-৩ বাক্যের নির্দিষ্ট, উষ্ণ, professional personal-doctor advice",
+  "content": "২-৩ বাক্যের উষ্ণ, নির্দিষ্ট, ডাক্তার-মানের পরামর্শ",
   "category": "${category}",
   "contextSnapshot": {
     "timeOfDay": "${timeOfDay}",
@@ -114,10 +137,12 @@ ${JSON.stringify(historicalContext || {})}
 }
 
 নিয়ম:
-- ${profile.name} নাম একবার ব্যবহার করো
-- generic advice নয়
-- historicalContext-এর অন্তত একটি pattern refer করো যদি relevant হয়
-- বাংলায়
+- ${profile.name} নাম একবার ব্যবহার করবে
+- generic advice দেবে না
+- historicalContext-এর অন্তত ১টি বাস্তব pattern mention করবে, যদি relevant হয়
+- যদি পানি, প্রোটিন, meal pattern, sleep, steps বা repeated food trend দেখা যায়, সেটা explain করবে
+- কোনো ভয় দেখানো ভাষা নয়; calm, premium, helpful tone
+- বাংলায় লিখবে
 `;
 }
 

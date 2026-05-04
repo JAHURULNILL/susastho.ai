@@ -23,16 +23,58 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is missing on backend.' });
     }
 
-    const prompt = `
-ইউজার: ${profile.name}, বয়স: ${profile.age}
-ওজন: ${profile.weightKg}kg, উচ্চতা: ${profile.heightCm}cm
-দৈনিক ক্যালরি লক্ষ্য: ${profile.dailyCalorieTarget || 0} kcal
-স্বাস্থ্য সমস্যা: ${(profile.conditions || []).join(', ') || 'কোনো সমস্যা নেই'}
-লক্ষ্য: ${profile.goal}
-সপ্তাহ শুরু: ${weekOf || ''}
-সাম্প্রতিক কনটেক্সট: ${JSON.stringify(historicalContext || {})}
+    const prompt = buildMealPlanPrompt(profile, weekOf, historicalContext);
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: {
+            temperature: 0.32,
+            response_mime_type: 'application/json',
+          },
+        }),
+      },
+    );
 
-এই সপ্তাহের (৭ দিন) জন্য meal plan বানাও।
+    const json = await response.json();
+    if (!response.ok) {
+      return res.status(response.status).json({ error: json });
+    }
+
+    const parsed = safeJsonParse(extractText(json));
+    return res.status(200).json(parsed);
+  } catch (error) {
+    return res.status(500).json({ error: stringifyError(error) });
+  }
+};
+
+function buildMealPlanPrompt(profile, weekOf, historicalContext) {
+  const conditions = Array.isArray(profile.conditions) && profile.conditions.length > 0
+    ? profile.conditions.join(', ')
+    : 'কোনো নির্দিষ্ট সমস্যা উল্লেখ নেই';
+
+  return `
+তুমি একজন অভিজ্ঞ বাংলাদেশি nutrition planner।
+
+ইউজারের তথ্য:
+- নাম: ${profile.name}
+- বয়স: ${profile.age}
+- লিঙ্গ: ${profile.gender || 'অজানা'}
+- ওজন: ${profile.weightKg}kg
+- উচ্চতা: ${profile.heightCm}cm
+- দৈনিক ক্যালরি লক্ষ্য: ${profile.dailyCalorieTarget || 0} kcal
+- লক্ষ্য: ${profile.goal}
+- স্বাস্থ্য সমস্যা: ${conditions}
+- সপ্তাহ শুরু: ${weekOf || ''}
+
+গত কয়েক দিনের বাস্তব context:
+${JSON.stringify(historicalContext || {}, null, 2)}
+
+এই সপ্তাহের জন্য meal plan বানাও।
+
 শুধু JSON:
 {
   "plan": {
@@ -57,39 +99,16 @@ module.exports = async function handler(req, res) {
 }
 
 নিয়ম:
-- সব দেশীয় সহজলভ্য খাবার
-- variety রাখতে হবে
-- historicalContext-এ যে pattern আছে সেটা consider করবে
-- belly fat/diabetes থাকলে simple carbs control করবে
-- budget-friendly option mix করবে
+- শুধু বাংলাদেশি সহজলভ্য খাবার ব্যবহার করবে
+- একই খাবার বারবার repeat করবে না
+- historicalContext-এ repeated foods থাকলে smart rotation করবে
+- যদি পানি কম, প্রোটিন কম, বা high-carb pattern থাকে, plan-এ সেটা rebalance করবে
+- ডায়াবেটিস/পেটের চর্বি থাকলে refined carb কমাবে
+- digestion issue থাকলে রাতের খাবার হালকা করবে
+- budget-friendly mix রাখবে
+- plan practical, home-friendly, premium এবং realistic হবে
 `;
-
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: {
-            temperature: 0.35,
-            response_mime_type: 'application/json',
-          },
-        }),
-      },
-    );
-
-    const json = await response.json();
-    if (!response.ok) {
-      return res.status(response.status).json({ error: json });
-    }
-
-    const parsed = safeJsonParse(extractText(json));
-    return res.status(200).json(parsed);
-  } catch (error) {
-    return res.status(500).json({ error: stringifyError(error) });
-  }
-};
+}
 
 function extractText(payload) {
   const parts = payload?.candidates?.[0]?.content?.parts;

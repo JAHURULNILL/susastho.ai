@@ -73,6 +73,22 @@ class FoodResultBottomSheet extends ConsumerWidget {
                         Text(result.foodName, style: AppTextStyles.screenTitle),
                         const SizedBox(height: 4),
                         Text(_subtitle, style: AppTextStyles.caption),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: _modeAccent.withValues(alpha: 0.10),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: _modeAccent.withValues(alpha: 0.20)),
+                          ),
+                          child: Text(
+                            _modeLabel,
+                            style: AppTextStyles.caption.copyWith(
+                              color: _modeAccent,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                         if (result.summary.isNotEmpty) ...[
                           const SizedBox(height: 8),
                           Text(
@@ -308,6 +324,28 @@ class FoodResultBottomSheet extends ConsumerWidget {
         return 'AI রসিদ বিশ্লেষণ • এইমাত্র';
       default:
         return 'AI বিশ্লেষণ • এইমাত্র';
+    }
+  }
+
+  String get _modeLabel {
+    switch (result.analysisMode) {
+      case 'menu':
+        return 'রেস্টুরেন্ট মেনু গাইড';
+      case 'receipt':
+        return 'বাজার ও রসিদ ইনসাইট';
+      default:
+        return 'খাবার স্ক্যান ফলাফল';
+    }
+  }
+
+  Color get _modeAccent {
+    switch (result.analysisMode) {
+      case 'receipt':
+        return AppColors.blue;
+      case 'menu':
+        return AppColors.amber;
+      default:
+        return AppColors.primary;
     }
   }
 

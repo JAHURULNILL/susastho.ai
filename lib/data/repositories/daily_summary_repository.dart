@@ -238,18 +238,106 @@ class DailySummaryRepository {
 
   Future<Map<String, dynamic>> loadHistoricalContext() async {
     final weeklyCalories = await loadCurrentWeekCalories();
+    final weeklyWater = await loadCurrentWeekWater();
     final recentMeals = await loadRecentMeals();
-    final avgCalories = weeklyCalories.values.where((value) => value > 0).isEmpty
+    final calorieValues = weeklyCalories.values.where((value) => value > 0).toList();
+    final avgCalories = calorieValues.isEmpty
         ? 0
-        : weeklyCalories.values.where((value) => value > 0).reduce((a, b) => a + b) /
-            weeklyCalories.values.where((value) => value > 0).length;
+        : calorieValues.reduce((a, b) => a + b) / calorieValues.length;
+    final topFoods = _topFoods(recentMeals);
+    final slotMix = _slotMix(recentMeals);
+    final macroSummary = _macroSummary(recentMeals);
+    final waterValues = weeklyWater.values.where((value) => value > 0).toList();
+    final averageWater = waterValues.isEmpty
+        ? 0
+        : (waterValues.reduce((a, b) => a + b) / waterValues.length);
+    final calorieTrend = _trendLabel(calorieValues);
+    final hydrationTrend = _trendLabel(waterValues.map((value) => value.toDouble()).toList());
+    final mealCount = recentMeals.length;
 
     return {
       'recentMeals': recentMeals,
       'weeklyCalories': weeklyCalories,
-      'weeklyWater': await loadCurrentWeekWater(),
+      'weeklyWater': weeklyWater,
       'averageCalories': avgCalories.round(),
+      'mealCountLastDays': mealCount,
+      'topFoods': topFoods,
+      'slotMix': slotMix,
+      'macroSummary': macroSummary,
+      'averageWater': averageWater.round(),
+      'calorieTrend': calorieTrend,
+      'hydrationTrend': hydrationTrend,
+      'daysWithFoodLogs': calorieValues.length,
+      'daysWithWaterLogs': waterValues.length,
     };
+  }
+
+  List<String> _topFoods(List<Map<String, dynamic>> recentMeals) {
+    final counts = <String, int>{};
+    for (final meal in recentMeals) {
+      final name = (meal['foodName'] as String? ?? '').trim();
+      if (name.isEmpty) {
+        continue;
+      }
+      counts.update(name, (value) => value + 1, ifAbsent: () => 1);
+    }
+
+    final sorted = counts.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    return sorted.take(5).map((entry) => entry.key).toList();
+  }
+
+  Map<String, int> _slotMix(List<Map<String, dynamic>> recentMeals) {
+    final slots = <String, int>{};
+    for (final meal in recentMeals) {
+      final slot = (meal['slot'] as String? ?? '').trim();
+      if (slot.isEmpty) {
+        continue;
+      }
+      slots.update(slot, (value) => value + 1, ifAbsent: () => 1);
+    }
+    return slots;
+  }
+
+  Map<String, double> _macroSummary(List<Map<String, dynamic>> recentMeals) {
+    if (recentMeals.isEmpty) {
+      return const {
+        'averageProtein': 0,
+        'averageCarbs': 0,
+        'averageFat': 0,
+      };
+    }
+
+    final protein = recentMeals.fold<double>(
+      0,
+      (total, meal) => total + ((meal['protein'] as num?)?.toDouble() ?? 0),
+    );
+    final carbs = recentMeals.fold<double>(
+      0,
+      (total, meal) => total + ((meal['carbs'] as num?)?.toDouble() ?? 0),
+    );
+    final fat = recentMeals.fold<double>(
+      0,
+      (total, meal) => total + ((meal['fat'] as num?)?.toDouble() ?? 0),
+    );
+    final divisor = recentMeals.length;
+    return {
+      'averageProtein': protein / divisor,
+      'averageCarbs': carbs / divisor,
+      'averageFat': fat / divisor,
+    };
+  }
+
+  String _trendLabel(List<double> values) {
+    if (values.length < 2) {
+      return 'stable';
+    }
+    final firstHalf = values.take(values.length ~/ 2).fold<double>(0, (a, b) => a + b);
+    final secondHalf = values.skip(values.length ~/ 2).fold<double>(0, (a, b) => a + b);
+    if ((secondHalf - firstHalf).abs() < 1) {
+      return 'stable';
+    }
+    return secondHalf > firstHalf ? 'up' : 'down';
   }
 
   String _formatDate(DateTime date) {

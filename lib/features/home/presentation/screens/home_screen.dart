@@ -42,10 +42,10 @@ class HomeScreen extends ConsumerWidget {
     final queuedItems = ref.watch(offlineQueueCountProvider).asData?.value ?? 0;
 
     if (profileAsync.isLoading && profile == null) {
-      return const Center(child: CircularProgressIndicator());
+      return const _HomeLoadingView();
     }
     if (profile == null) {
-      return const SizedBox.shrink();
+      return const _HomeLoadingView();
     }
 
     final targetCalories = (settings.customCalorieGoal ?? profile.dailyCalorieTarget).toDouble();
@@ -677,6 +677,79 @@ class _MiniActivity extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: AppTextStyles.metricSmall.copyWith(fontSize: 20),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeLoadingView extends StatelessWidget {
+  const _HomeLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
+        children: const [
+          _SkeletonBox(height: 72, radius: 22),
+          SizedBox(height: 18),
+          _SkeletonBox(height: 170, radius: 24),
+          SizedBox(height: 14),
+          _SkeletonBox(height: 250, radius: 22),
+          SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(child: _SkeletonBox(height: 108, radius: 20)),
+              SizedBox(width: 10),
+              Expanded(child: _SkeletonBox(height: 108, radius: 20)),
+              SizedBox(width: 10),
+              Expanded(child: _SkeletonBox(height: 108, radius: 20)),
+            ],
+          ),
+          SizedBox(height: 14),
+          _SkeletonBox(height: 168, radius: 22),
+          SizedBox(height: 14),
+          _SkeletonBox(height: 196, radius: 22),
+        ],
+      ),
+    );
+  }
+}
+
+class _SkeletonBox extends StatelessWidget {
+  const _SkeletonBox({
+    required this.height,
+    required this.radius,
+  });
+
+  final double height;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(radius),
+        gradient: const LinearGradient(
+          colors: [Color(0xFFF5FAF7), Color(0xFFEAF4EE)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(15, 38, 27, 0.04),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color.fromRGBO(45, 106, 79, 0.09),
+            blurRadius: 20,
+            spreadRadius: -8,
+            offset: Offset(0, 10),
           ),
         ],
       ),

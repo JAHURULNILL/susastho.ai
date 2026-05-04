@@ -1,3 +1,5 @@
+// ignore_for_file: unnecessary_null_comparison
+
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -30,6 +32,10 @@ class JourneyScreen extends ConsumerWidget {
     final dailyGoal = profile?.dailyCalorieTarget ?? 0;
     final avgCalories = _averageWeeklyCalories(weeklyCalories);
     final goalPercent = _goalMetPercent(weeklyCalories, dailyGoal);
+
+    if (profile == null) {
+      return const _JourneyLoadingView();
+    }
 
     final widgets = <Widget>[
       InfoCard(
@@ -610,6 +616,54 @@ class _JourneyMilestone extends StatelessWidget {
           Text(value, style: AppTextStyles.metricSmall.copyWith(color: accent)),
         ],
       ),
+    );
+  }
+}
+
+class _JourneyLoadingView extends StatelessWidget {
+  const _JourneyLoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.screenPadding,
+        20,
+        AppSpacing.screenPadding,
+        120,
+      ),
+      children: const [
+        _JourneySkeleton(height: 126),
+        SizedBox(height: AppSpacing.cardGap),
+        Row(
+          children: [
+            Expanded(child: _JourneySkeleton(height: 96)),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(child: _JourneySkeleton(height: 96)),
+            SizedBox(width: AppSpacing.sm),
+            Expanded(child: _JourneySkeleton(height: 96)),
+          ],
+        ),
+        SizedBox(height: AppSpacing.cardGap),
+        _JourneySkeleton(height: 264),
+        SizedBox(height: AppSpacing.cardGap),
+        _JourneySkeleton(height: 220),
+        SizedBox(height: AppSpacing.cardGap),
+        _JourneySkeleton(height: 220),
+      ],
+    );
+  }
+}
+
+class _JourneySkeleton extends StatelessWidget {
+  const _JourneySkeleton({required this.height});
+
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return InfoCard(
+      child: SizedBox(height: height),
     );
   }
 }

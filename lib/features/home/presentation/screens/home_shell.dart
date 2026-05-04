@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -47,30 +49,34 @@ class HomeShell extends ConsumerWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(14, 0, 14, 12),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              color: AppColors.white.withValues(alpha: 0.96),
-              borderRadius: BorderRadius.circular(26),
-              border: Border.all(color: AppColors.border),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color.fromRGBO(18, 48, 31, 0.05),
-                  blurRadius: 10,
-                  offset: Offset(0, 2),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(26),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 14, sigmaY: 14),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.white.withValues(alpha: 0.88),
+                  borderRadius: BorderRadius.circular(26),
+                  border: Border.all(color: AppColors.border.withValues(alpha: 0.92)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color.fromRGBO(18, 48, 31, 0.05),
+                      blurRadius: 10,
+                      offset: Offset(0, 2),
+                    ),
+                    BoxShadow(
+                      color: Color.fromRGBO(45, 106, 79, 0.16),
+                      blurRadius: 28,
+                      spreadRadius: -8,
+                      offset: Offset(0, 12),
+                    ),
+                  ],
                 ),
-                BoxShadow(
-                  color: Color.fromRGBO(45, 106, 79, 0.16),
-                  blurRadius: 28,
-                  spreadRadius: -8,
-                  offset: Offset(0, 12),
-                ),
-              ],
-            ),
-            child: SizedBox(
-              height: 88,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
-                child: Row(
+                child: SizedBox(
+                  height: 88,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 16),
+                    child: Row(
                   children: [
                     Expanded(
                       child: _NavItem(
@@ -136,6 +142,8 @@ class HomeShell extends ConsumerWidget {
                       ),
                     ),
                   ],
+                    ),
+                  ),
                 ),
               ),
             ),

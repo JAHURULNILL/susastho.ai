@@ -23,36 +23,7 @@ module.exports = async function handler(req, res) {
       return res.status(500).json({ error: 'GEMINI_API_KEY is missing on backend.' });
     }
 
-    const bmi = profile.weightKg && profile.heightCm
-      ? (profile.weightKg / ((profile.heightCm / 100) ** 2)).toFixed(1)
-      : '0.0';
-
-    const prompt = `
-ইউজার: ${profile.name}, বয়স: ${profile.age}, BMI: ${bmi}
-সমস্যা: ${(profile.conditions || []).join(', ') || 'কোনো সমস্যা নেই'}
-লক্ষ্য: ${profile.goal}
-সাম্প্রতিক কনটেক্সট: ${JSON.stringify(historicalContext || {})}
-
-আজকের জন্য ৩টি উপযুক্ত ব্যায়াম suggest করো।
-শুধু JSON:
-{
-  "items": [
-    {
-      "name": "ব্যায়ামের নাম বাংলায়",
-      "duration_minutes": 15,
-      "calories_burned": 80,
-      "instructions": "এক লাইনে কিভাবে করবে",
-      "condition_benefit": "এই ব্যায়াম তার কোন সমস্যায় কীভাবে সাহায্য করে"
-    }
-  ]
-}
-
-নিয়ম:
-- equipment-less বা সহজে করা যায় এমন option prefer করো
-- যদি user-এর সমস্যা পুরুষ স্বাস্থ্য/মূত্রজনিত হয়, kegels বা pelvic-floor relevant হলে suggest করো
-- যদি belly fat/obesity থাকে, walk + core mix রাখো
-`;
-
+    const prompt = buildExercisePrompt(profile, historicalContext);
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${geminiApiKey}`,
       {
@@ -61,7 +32,7 @@ module.exports = async function handler(req, res) {
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
-            temperature: 0.3,
+            temperature: 0.28,
             response_mime_type: 'application/json',
           },
         }),
@@ -79,6 +50,53 @@ module.exports = async function handler(req, res) {
     return res.status(500).json({ error: stringifyError(error) });
   }
 };
+
+function buildExercisePrompt(profile, historicalContext) {
+  const bmi = profile.weightKg && profile.heightCm
+    ? (profile.weightKg / ((profile.heightCm / 100) ** 2)).toFixed(1)
+    : '0.0';
+  const conditions = Array.isArray(profile.conditions) && profile.conditions.length > 0
+    ? profile.conditions.join(', ')
+    : 'কোনো নির্দিষ্ট সমস্যা উল্লেখ নেই';
+
+  return `
+তুমি একজন অভিজ্ঞ বাংলাদেশি fitness coach এবং rehabilitation-aware health guide।
+
+ইউজার:
+- নাম: ${profile.name}
+- বয়স: ${profile.age}
+- লিঙ্গ: ${profile.gender || 'অজানা'}
+- BMI: ${bmi}
+- লক্ষ্য: ${profile.goal}
+- স্বাস্থ্য সমস্যা: ${conditions}
+
+সাম্প্রতিক বাস্তব context:
+${JSON.stringify(historicalContext || {}, null, 2)}
+
+আজকের জন্য ৩টি উপযুক্ত ব্যায়াম suggest করো।
+
+শুধু JSON:
+{
+  "items": [
+    {
+      "name": "ব্যায়ামের নাম বাংলায়",
+      "duration_minutes": 15,
+      "calories_burned": 80,
+      "instructions": "এক লাইনে কিভাবে করবে",
+      "condition_benefit": "এই ব্যায়াম তার কোন সমস্যায় কীভাবে সাহায্য করে"
+    }
+  ]
+}
+
+নিয়ম:
+- equipment-less বা ঘরে করা যায় এমন ব্যায়াম prefer করবে
+- historicalContext-এ steps কম থাকলে walking/mobility mix রাখবে
+- belly fat/obesity থাকলে walk + core + consistency mix রাখবে
+- urinary বা পুরুষ স্বাস্থ্যের concern থাকলে pelvic floor / kegel relevant হলে include করবে
+- sleep trend খারাপ হলে রাতে heavy workout না দিয়ে calming movement দেবে
+- exercise practical, safe, beginner-friendly এবং premium coaching tone-এ হবে
+`;
+}
 
 function extractText(payload) {
   const parts = payload?.candidates?.[0]?.content?.parts;
