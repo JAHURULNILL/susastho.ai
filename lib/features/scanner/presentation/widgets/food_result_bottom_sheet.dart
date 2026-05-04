@@ -30,19 +30,30 @@ class FoodResultBottomSheet extends ConsumerWidget {
 
     return SafeArea(
       child: Container(
-        decoration: const BoxDecoration(
-          color: AppColors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).cardTheme.color ?? AppColors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
+              Center(
+                child: Container(
+                  width: 46,
+                  height: 5,
+                  decoration: BoxDecoration(
+                    color: AppColors.border,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
               if (image != null && image.existsSync()) ...[
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(20),
                   child: Image.file(
                     image,
                     width: double.infinity,
@@ -50,7 +61,7 @@ class FoodResultBottomSheet extends ConsumerWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
               ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -61,45 +72,51 @@ class FoodResultBottomSheet extends ConsumerWidget {
                       children: [
                         Text(result.foodName, style: AppTextStyles.screenTitle),
                         const SizedBox(height: 4),
-                        Text(
-                          _subtitle,
-                          style: AppTextStyles.caption,
-                        ),
+                        Text(_subtitle, style: AppTextStyles.caption),
+                        if (result.summary.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            result.summary,
+                            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+                          ),
+                        ],
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Column(
                     children: [
                       Container(
-                        width: 56,
-                        height: 56,
+                        width: 64,
+                        height: 64,
                         decoration: BoxDecoration(
                           color: scoreBackground,
                           shape: BoxShape.circle,
-                          border: Border.all(color: scoreColor, width: 2),
+                          border: Border.all(color: scoreColor, width: 2.2),
                         ),
                         alignment: Alignment.center,
                         child: Text(
-                          BengaliFormatters.toBengaliNumber(result.healthScore),
-                          style: AppTextStyles.bodyLarge.copyWith(
+                          '${BengaliFormatters.toBengaliNumber(result.healthScore)}/১০০',
+                          textAlign: TextAlign.center,
+                          style: AppTextStyles.caption.copyWith(
                             color: scoreColor,
                             fontWeight: FontWeight.w800,
+                            fontSize: 11,
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 6),
                       Text('স্বাস্থ্য স্কোর', style: AppTextStyles.caption),
                     ],
                   ),
                 ],
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
               GridView.count(
                 physics: const NeverScrollableScrollPhysics(),
                 shrinkWrap: true,
                 crossAxisCount: 2,
-                childAspectRatio: 1.8,
+                childAspectRatio: 1.65,
                 crossAxisSpacing: 10,
                 mainAxisSpacing: 10,
                 children: [
@@ -109,6 +126,7 @@ class FoodResultBottomSheet extends ConsumerWidget {
                     unit: 'kcal',
                     background: AppColors.primaryPale,
                     accent: AppColors.primary,
+                    icon: Icons.local_fire_department_rounded,
                   ),
                   _MacroCell(
                     label: 'প্রোটিন',
@@ -116,6 +134,7 @@ class FoodResultBottomSheet extends ConsumerWidget {
                     unit: 'g',
                     background: AppColors.bluePale,
                     accent: AppColors.blue,
+                    icon: Icons.fitness_center_rounded,
                   ),
                   _MacroCell(
                     label: 'কার্বস',
@@ -123,6 +142,7 @@ class FoodResultBottomSheet extends ConsumerWidget {
                     unit: 'g',
                     background: AppColors.primaryFaint,
                     accent: AppColors.primaryLight,
+                    icon: Icons.grain_rounded,
                   ),
                   _MacroCell(
                     label: 'ফ্যাট',
@@ -130,109 +150,129 @@ class FoodResultBottomSheet extends ConsumerWidget {
                     unit: 'g',
                     background: AppColors.amberPale,
                     accent: AppColors.amber,
+                    icon: Icons.opacity_rounded,
                   ),
                 ],
               ),
-              const SizedBox(height: 18),
-              const Divider(height: 1, color: AppColors.border),
-              const SizedBox(height: 18),
               if (result.pros.isNotEmpty) ...[
-                Text('✅ উপকারিতা', style: AppTextStyles.cardTitle),
+                const SizedBox(height: 18),
+                Text('উপকারিতা', style: AppTextStyles.cardTitle),
                 const SizedBox(height: 10),
                 ...result.pros.map((item) => _LineItem(text: item, color: AppColors.primary)),
               ],
               if (result.warnings.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text('⚠️ সতর্কতা', style: AppTextStyles.cardTitle),
+                Text('সতর্কতা', style: AppTextStyles.cardTitle),
                 const SizedBox(height: 10),
                 ...result.warnings.map((item) => _LineItem(text: item, color: AppColors.red)),
               ],
               if (result.redFlags.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
-                  title: '🚨 রিয়েল-টাইম সতর্কতা',
+                  title: 'রিয়েল-টাইম সতর্কতা',
                   body: result.redFlags.join('\n'),
                   backgroundColor: AppColors.redPale,
                   borderColor: AppColors.red,
-                  bodyColor: AppColors.red,
+                  icon: Icons.warning_amber_rounded,
                 ),
               ],
               if (result.plateBreakdown.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text('🍽️ প্লেট বিশ্লেষণ', style: AppTextStyles.cardTitle),
-                const SizedBox(height: 10),
-                ...result.plateBreakdown.map((item) => _LineItem(text: item, color: AppColors.primaryMid)),
+                _InsightCard(
+                  title: 'মিক্সড প্লেট বিশ্লেষণ',
+                  body: result.plateBreakdown.join('\n'),
+                  backgroundColor: AppColors.primaryFaint,
+                  borderColor: AppColors.primaryLight,
+                  icon: Icons.dinner_dining_rounded,
+                ),
               ],
               if (result.menuSuggestions.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text('📋 এই মেনু থেকে সেরা পছন্দ', style: AppTextStyles.cardTitle),
-                const SizedBox(height: 10),
-                ...result.menuSuggestions.map((item) => _LineItem(text: item, color: AppColors.primary)),
+                _InsightCard(
+                  title: 'মেনু থেকে ভালো পছন্দ',
+                  body: result.menuSuggestions.join('\n'),
+                  backgroundColor: AppColors.primaryFaint,
+                  borderColor: AppColors.primaryLight,
+                  icon: Icons.menu_book_rounded,
+                ),
               ],
               if (result.receiptInsights.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text('🧾 রসিদ বিশ্লেষণ', style: AppTextStyles.cardTitle),
-                const SizedBox(height: 10),
-                ...result.receiptInsights.map((item) => _LineItem(text: item, color: AppColors.primaryMid)),
+                _InsightCard(
+                  title: 'রসিদ বিশ্লেষণ',
+                  body: result.receiptInsights.join('\n'),
+                  backgroundColor: AppColors.bluePale,
+                  borderColor: AppColors.blue,
+                  icon: Icons.receipt_long_rounded,
+                ),
               ],
               if (result.grocerySuggestions.isNotEmpty) ...[
                 const SizedBox(height: 16),
-                Text('🛒 স্মার্ট বাজার তালিকা', style: AppTextStyles.cardTitle),
-                const SizedBox(height: 10),
-                ...result.grocerySuggestions.map((item) => _LineItem(text: item, color: AppColors.primary)),
+                _InsightCard(
+                  title: 'স্মার্ট বাজার তালিকা',
+                  body: result.grocerySuggestions.join('\n'),
+                  backgroundColor: AppColors.primaryFaint,
+                  borderColor: AppColors.primaryLight,
+                  icon: Icons.shopping_basket_rounded,
+                ),
               ],
               if ((result.memoryInsight ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
-                  title: '🧠 সাম্প্রতিক প্যাটার্ন',
+                  title: 'সাম্প্রতিক প্যাটার্ন',
                   body: result.memoryInsight!,
                   backgroundColor: AppColors.bluePale,
                   borderColor: AppColors.blue,
+                  icon: Icons.psychology_alt_rounded,
                 ),
               ],
               if ((result.conditionAdvice ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
-                  title: '🎯 আপনার শরীর অনুযায়ী',
+                  title: 'আপনার শরীর অনুযায়ী পরামর্শ',
                   body: result.conditionAdvice!,
                   backgroundColor: AppColors.amberPale,
                   borderColor: AppColors.amber,
+                  icon: Icons.health_and_safety_rounded,
                 ),
               ],
               if ((result.alternative ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
-                  title: '🌿 স্বাস্থ্যকর বিকল্প',
+                  title: 'স্বাস্থ্যকর বিকল্প',
                   body: result.alternative!,
                   backgroundColor: AppColors.primaryFaint,
                   borderColor: AppColors.primaryLight,
+                  icon: Icons.eco_rounded,
                 ),
               ],
               if ((result.doctorTip ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
-                  title: '🩺 ডাক্তারের ছোট টিপ',
+                  title: 'ডাক্তারের ছোট টিপ',
                   body: result.doctorTip!,
                   backgroundColor: AppColors.primaryFaint,
                   borderColor: AppColors.primaryLight,
+                  icon: Icons.medical_services_rounded,
                 ),
               ],
               if ((result.bestChoice ?? '').isNotEmpty || (result.budgetImpact ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
-                  title: '✨ স্মার্ট সিদ্ধান্ত',
+                  title: 'স্মার্ট সিদ্ধান্ত',
                   body: [
                     if ((result.bestChoice ?? '').isNotEmpty) result.bestChoice!,
                     if ((result.budgetImpact ?? '').isNotEmpty) result.budgetImpact!,
                   ].join('\n'),
                   backgroundColor: AppColors.primaryFaint,
                   borderColor: AppColors.primaryLight,
+                  icon: Icons.auto_awesome_rounded,
                 ),
               ],
-              const SizedBox(height: 18),
+              const SizedBox(height: 20),
               PrimaryButton(
-                label: '+ আজকের খাবারে যোগ করুন',
-                icon: Icons.add_circle_outline_rounded,
+                label: result.analysisMode == 'meal' ? '+ আজকের খাবারে যোগ করুন' : 'বিশ্লেষণ সম্পন্ন',
+                icon: result.analysisMode == 'meal' ? Icons.add_circle_outline_rounded : Icons.check_circle_outline_rounded,
                 onPressed: result.analysisMode == 'meal'
                     ? () async {
                         await ref.read(dailySummaryProvider.notifier).addMeal(
@@ -251,7 +291,7 @@ class FoodResultBottomSheet extends ConsumerWidget {
                           );
                         }
                       }
-                    : null,
+                    : () => Navigator.of(context).pop(),
               ),
             ],
           ),
@@ -272,22 +312,14 @@ class FoodResultBottomSheet extends ConsumerWidget {
   }
 
   Color get _scoreColor {
-    if (result.healthScore >= 80) {
-      return AppColors.primary;
-    }
-    if (result.healthScore >= 50) {
-      return AppColors.amber;
-    }
+    if (result.healthScore >= 80) return AppColors.primary;
+    if (result.healthScore >= 50) return AppColors.amber;
     return AppColors.red;
   }
 
   Color get _scoreBackground {
-    if (result.healthScore >= 80) {
-      return AppColors.primaryPale;
-    }
-    if (result.healthScore >= 50) {
-      return AppColors.amberPale;
-    }
+    if (result.healthScore >= 80) return AppColors.primaryPale;
+    if (result.healthScore >= 50) return AppColors.amberPale;
     return AppColors.redPale;
   }
 }
@@ -298,14 +330,14 @@ class _InsightCard extends StatelessWidget {
     required this.body,
     required this.backgroundColor,
     required this.borderColor,
-    this.bodyColor,
+    required this.icon,
   });
 
   final String title;
   final String body;
   final Color backgroundColor;
   final Color borderColor;
-  final Color? bodyColor;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -313,14 +345,29 @@ class _InsightCard extends StatelessWidget {
       backgroundColor: backgroundColor,
       borderColor: borderColor,
       padding: const EdgeInsets.all(16),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
-          const SizedBox(height: 8),
-          Text(
-            body,
-            style: AppTextStyles.body.copyWith(color: bodyColor ?? AppColors.textPrimary),
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, size: 18, color: borderColor),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: AppTextStyles.cardTitle.copyWith(fontSize: 16)),
+                const SizedBox(height: 8),
+                Text(body, style: AppTextStyles.body),
+              ],
+            ),
           ),
         ],
       ),
@@ -335,6 +382,7 @@ class _MacroCell extends StatelessWidget {
     required this.unit,
     required this.background,
     required this.accent,
+    required this.icon,
   });
 
   final String label;
@@ -342,6 +390,7 @@ class _MacroCell extends StatelessWidget {
   final String unit;
   final Color background;
   final Color accent;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
@@ -349,14 +398,20 @@ class _MacroCell extends StatelessWidget {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: background,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
+          Row(
+            children: [
+              Icon(icon, size: 14, color: accent),
+              const SizedBox(width: 6),
+              Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+            ],
+          ),
+          const SizedBox(height: 8),
           RichText(
             text: TextSpan(
               children: [
@@ -404,7 +459,7 @@ class _LineItem extends StatelessWidget {
       child: Text(
         text,
         style: AppTextStyles.body.copyWith(
-          color: color == AppColors.red ? AppColors.red : AppColors.textPrimary,
+          color: color == AppColors.red ? AppColors.red : Theme.of(context).textTheme.bodyLarge?.color ?? AppColors.textPrimary,
         ),
       ),
     );
