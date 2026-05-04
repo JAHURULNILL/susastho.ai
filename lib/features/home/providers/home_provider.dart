@@ -106,8 +106,8 @@ final todayExercisesProvider = StreamProvider<List<WeeklyExerciseItem>>((ref) {
 final activeDoctorNoteProvider = FutureProvider<DoctorNoteRecord?>((ref) async {
   final profile = ref.watch(userProfileProvider).asData?.value;
   final summary = ref.watch(dailySummaryProvider).asData?.value;
-  final exercises = ref.watch(todayExercisesProvider).asData?.value;
-  if (profile == null || summary == null || exercises == null) {
+  final exercises = ref.watch(todayExercisesProvider).asData?.value ?? const <WeeklyExerciseItem>[];
+  if (profile == null || summary == null) {
     return null;
   }
 

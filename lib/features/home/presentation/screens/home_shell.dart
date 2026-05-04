@@ -37,6 +37,7 @@ class HomeShell extends ConsumerWidget {
       if (settings?.wearableSyncEnabled ?? true) {
         ref.watch(_healthSyncBootstrapProvider);
       }
+      ref.watch(_plannerBootstrapProvider);
       ref.watch(_offlineSyncBootstrapProvider);
       if (settings?.notificationsEnabled ?? true) {
         ref.watch(_smartNotificationBootstrapProvider);
@@ -203,6 +204,17 @@ final _smartNotificationBootstrapProvider = FutureProvider<void>((ref) async {
         steps: steps,
         sleep: sleep,
       );
+});
+
+final _plannerBootstrapProvider = FutureProvider<void>((ref) async {
+  final profile = ref.watch(userProfileProvider).asData?.value;
+  if (profile == null) {
+    return;
+  }
+  await Future.wait([
+    ref.read(plannerRepositoryProvider).ensureCurrentWeekMealPlan(profile),
+    ref.read(plannerRepositoryProvider).ensureTodayExercises(profile),
+  ]);
 });
 
 class _NavItem extends StatelessWidget {

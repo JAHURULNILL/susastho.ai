@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/services.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_design.dart';
@@ -21,17 +23,69 @@ class ScannerScreen extends ConsumerStatefulWidget {
 
 class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   late final TextEditingController _controller;
+  late final stt.SpeechToText _speech;
+  bool _isListening = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController();
+    _speech = stt.SpeechToText();
   }
 
   @override
   void dispose() {
+    _speech.stop();
     _controller.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleVoiceInput() async {
+    if (_isListening) {
+      await _speech.stop();
+      if (mounted) {
+        setState(() => _isListening = false);
+      }
+      return;
+    }
+
+    final available = await _speech.initialize(
+      onStatus: (status) {
+        if (!mounted) {
+          return;
+        }
+        if (status == 'done' || status == 'notListening') {
+          setState(() => _isListening = false);
+        }
+      },
+    );
+
+    if (!available) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('ভয়েস ইনপুট চালু করা যাচ্ছে না।')),
+        );
+      }
+      return;
+    }
+
+    HapticFeedback.selectionClick();
+    setState(() => _isListening = true);
+    await _speech.listen(
+      localeId: 'bn_BD',
+      listenOptions: stt.SpeechListenOptions(
+        listenMode: stt.ListenMode.confirmation,
+      ),
+      onResult: (result) {
+        final words = result.recognizedWords.trim();
+        if (words.isEmpty) {
+          return;
+        }
+        _controller.text = words;
+        _controller.selection = TextSelection.collapsed(offset: words.length);
+        ref.read(scannerProvider.notifier).updateDescription(words);
+      },
+    );
   }
 
   @override
@@ -118,6 +172,27 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                       onPressed: state.isAnalyzing ? null : () => ref.read(scannerProvider.notifier).analyzeText(ref),
                       icon: const Icon(Icons.edit_note_rounded),
                       label: const Text('লিখে জানান'),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                InkWell(
+                  onTap: state.isAnalyzing ? null : _toggleVoiceInput,
+                  borderRadius: BorderRadius.circular(16),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: _isListening ? AppColors.redPale : AppColors.primaryFaint,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: _isListening ? AppColors.red : AppColors.primaryLight,
+                      ),
+                    ),
+                    child: Icon(
+                      _isListening ? Icons.mic_rounded : Icons.mic_none_rounded,
+                      color: _isListening ? AppColors.red : AppColors.primary,
                     ),
                   ),
                 ),

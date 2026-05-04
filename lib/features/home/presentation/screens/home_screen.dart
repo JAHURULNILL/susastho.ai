@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
@@ -61,14 +64,24 @@ class HomeScreen extends ConsumerWidget {
         .fold<double>(0, (sum, item) => sum + item.caloriesBurned);
     final netCalories = summary.consumedMacros.calories - burned;
     final streak = wellness?.calorieStreakDays ?? _calculateStreak(weeklyCalories, targetCalories);
+    final instantAdvice = _buildInstantAdvice(
+      profile: profile,
+      summary: summary,
+      targetMacros: targetMacros,
+      steps: todaySteps,
+      sleep: todaySleep,
+    );
 
     return SafeArea(
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
         children: [
           GreetingHeader(profile: profile),
-          const SizedBox(height: 18),
-          _DoctorNoteCard(note: note),
+          const SizedBox(height: 14),
+          _DoctorNoteCard(
+            note: note,
+            instantAdvice: instantAdvice,
+          ),
           const SizedBox(height: 14),
           MacroRingChart(
             target: targetMacros,
@@ -122,16 +135,6 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
           ),
-          if (wellness != null) ...[
-            const SizedBox(height: 14),
-            _AchievementCard(snapshot: wellness),
-          ],
-          if (queuedItems > 0) ...[
-            const SizedBox(height: 14),
-            _OfflineQueueCard(count: queuedItems),
-          ],
-          const SizedBox(height: 14),
-          _FastingCard(settings: settings),
           const SizedBox(height: 14),
           _ActivitySnapshotCard(
             steps: todaySteps,
@@ -141,6 +144,16 @@ class HomeScreen extends ConsumerWidget {
             water: summary.waterGlasses,
             wearableEnabled: settings.wearableSyncEnabled,
           ),
+          const SizedBox(height: 14),
+          _FastingCard(settings: settings),
+          if (wellness != null) ...[
+            const SizedBox(height: 14),
+            _AchievementCard(snapshot: wellness),
+          ],
+          if (queuedItems > 0) ...[
+            const SizedBox(height: 14),
+            _OfflineQueueCard(count: queuedItems),
+          ],
           const SizedBox(height: 14),
           _DiaryCard(
             meals: summary.meals,
@@ -166,6 +179,794 @@ class HomeScreen extends ConsumerWidget {
       }
     }
     return streak;
+  }
+
+  String _buildInstantAdvice({
+    required dynamic profile,
+    required DailySummary summary,
+    required NutritionMacro targetMacros,
+    required StepLogRecord? steps,
+    required SleepLogRecord? sleep,
+  }) {
+    final now = DateTime.now();
+    final consumed = summary.consumedMacros;
+    final water = summary.waterGlasses;
+    final stepCount = steps?.steps ?? 0;
+    final sleepHours = sleep?.hours ?? 0;
+    final proteinRatio = targetMacros.protein <= 0 ? 0 : consumed.protein / targetMacros.protein;
+
+    if (summary.meals.isEmpty) {
+      if (now.hour < 11) {
+        return '${profile.name.split(' ').first}, সকালটা হালকা কিন্তু পুষ্টিকর খাবার দিয়ে শুরু করুন। আজকের প্রথম খাবার লগ করলেই আমি পরের পরামর্শ আরও নির্ভুলভাবে দেব।';
+      }
+      return '${profile.name.split(' ').first}, আজ এখনো কোনো খাবার লগ হয়নি। এখন যা খাচ্ছেন সেটা লিখে বা ছবি তুলে দিন, আমি সঙ্গে সঙ্গে গাইড করব।';
+    }
+
+    if (water < 3 && now.hour >= 10) {
+      final remaining = 8 - water;
+      return '${profile.name.split(' ').first}, আজ পানি এখনো কম হয়েছে। এখন এক গ্লাস পানি খেলেই লক্ষ্যের দিকে ${BengaliFormatters.toBengaliNumber(remaining - 1 < 0 ? 0 : remaining - 1)} গ্লাস বাকি থাকবে।';
+    }
+
+    if (sleepHours > 0 && sleepHours < 6) {
+      return '${profile.name.split(' ').first}, আজকের ঘুম কম হয়েছে। আজ বিকেলের পর ক্যাফেইন কমিয়ে রাতে একটু আগে ঘুমালে শরীর দ্রুত recover করবে।';
+    }
+
+    if (proteinRatio < 0.35 && now.hour >= 18) {
+      return '${profile.name.split(' ').first}, আজ প্রোটিন এখনো কম আছে। রাতের খাবারে ডিম, ডাল, মাছ বা মুরগি রাখলে balance ভালো হবে।';
+    }
+
+    if (stepCount > 0 && stepCount < profile.dailyStepTarget * 0.35 && now.hour >= 17) {
+      return '${profile.name.split(' ').first}, আজ হাঁটা এখনো কম হয়েছে। ১৫–২০ মিনিট brisk walk করলে step target-এর দিকে ভালো অগ্রগতি হবে।';
+    }
+
+    return '${profile.name.split(' ').first}, আজকের routine মোটামুটি ঠিক আছে। এখন শুধু পানি, হাঁটা আর পরের meal-এর balance ঠিক রাখলেই দিনটা সুন্দর যাবে।';
+  }
+}
+
+class _DoctorNoteCard extends StatelessWidget {
+  const _DoctorNoteCard({
+    required this.note,
+    required this.instantAdvice,
+  });
+
+  final DoctorNoteRecord? note;
+  final String instantAdvice;
+
+  @override
+  Widget build(BuildContext context) {
+    final title = note == null
+        ? 'এখনকার জন্য দ্রুত পরামর্শ'
+        : (doctorNoteCategoryLabels[note!.category] ?? 'ডাক্তারের নোট');
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF173B2B), Color(0xFF23583F)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(20, 67, 46, 0.20),
+            blurRadius: 24,
+            spreadRadius: -10,
+            offset: Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            alignment: Alignment.center,
+            child: const Icon(Icons.favorite_rounded, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: AppColors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  note?.content ?? instantAdvice,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: AppTextStyles.body.copyWith(
+                    color: AppColors.white.withValues(alpha: 0.95),
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickStatCard extends StatelessWidget {
+  const _QuickStatCard({
+    required this.label,
+    required this.value,
+    required this.sublabel,
+    required this.background,
+    required this.icon,
+    required this.accent,
+  });
+
+  final String label;
+  final String value;
+  final String sublabel;
+  final Color background;
+  final IconData icon;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(15, 38, 27, 0.04),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color.fromRGBO(45, 106, 79, 0.08),
+            blurRadius: 20,
+            spreadRadius: -8,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: accent, size: 20),
+          const SizedBox(height: 12),
+          Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.metricSmall.copyWith(fontSize: 24),
+          ),
+          const SizedBox(height: 4),
+          Text(sublabel, style: AppTextStyles.caption),
+        ],
+      ),
+    );
+  }
+}
+
+class _FastingCard extends ConsumerStatefulWidget {
+  const _FastingCard({required this.settings});
+
+  final AppSettings settings;
+
+  @override
+  ConsumerState<_FastingCard> createState() => _FastingCardState();
+}
+
+class _FastingCardState extends ConsumerState<_FastingCard> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final settings = widget.settings;
+    final now = DateTime.now();
+    final startedAt = _resolveStartTime(settings, now);
+    final total = Duration(hours: settings.fastingWindowHours);
+    final elapsed = settings.fastingEnabled && startedAt != null ? now.difference(startedAt) : Duration.zero;
+    final safeElapsed = elapsed.isNegative ? Duration.zero : elapsed;
+    final remaining = safeElapsed >= total ? Duration.zero : total - safeElapsed;
+    final progress = settings.fastingEnabled && total.inMinutes > 0
+        ? (safeElapsed.inMinutes / total.inMinutes).clamp(0.0, 1.0)
+        : 0.0;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(15, 38, 27, 0.04),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color.fromRGBO(45, 106, 79, 0.09),
+            blurRadius: 20,
+            spreadRadius: -8,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(
+                  color: AppColors.primaryFaint,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.hourglass_bottom_rounded, color: AppColors.primary),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text('ইন্টারমিটেন্ট ফাস্টিং', style: AppTextStyles.cardTitle),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: settings.fastingEnabled ? AppColors.primaryPale : AppColors.border.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  settings.fastingEnabled ? 'চালু' : 'বন্ধ',
+                  style: AppTextStyles.caption.copyWith(
+                    color: settings.fastingEnabled ? AppColors.primary : AppColors.textMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (!settings.fastingEnabled || startedAt == null) ...[
+            Text(
+              'ফাস্টিং শুরু করলে এখানে real-time countdown দেখাবে। আপনি এখনই শুরু করতে পারেন, বা আগের কোনো সময়ও সেট করতে পারেন।',
+              style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+            ),
+          ] else ...[
+            Text(
+              'শুরু: ${_formatDateTime(startedAt)}',
+              style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _FastingMetric(
+                    title: 'পেরিয়েছে',
+                    value: _formatDuration(safeElapsed),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: _FastingMetric(
+                    title: 'বাকি আছে',
+                    value: _formatDuration(remaining),
+                    highlighted: true,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(999),
+              child: LinearProgressIndicator(
+                value: progress,
+                minHeight: 9,
+                backgroundColor: AppColors.border,
+                color: remaining == Duration.zero ? AppColors.primary : AppColors.primaryLight,
+              ),
+            ),
+          ],
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => _setStartedAt(DateTime.now()),
+                  child: const Text('এখন শুরু'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: PrimaryButton(
+                  label: 'সময় ঠিক করুন',
+                  onPressed: _pickCustomStart,
+                  height: 46,
+                  icon: Icons.schedule_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: _pickWindow,
+                  child: Text('${BengaliFormatters.toBengaliNumber(settings.fastingWindowHours)} ঘণ্টার উইন্ডো'),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () async {
+                    await ref.read(appSettingsProvider.notifier).save(
+                          settings.copyWith(
+                            fastingEnabled: false,
+                            clearFastingStartedAt: true,
+                          ),
+                        );
+                  },
+                  child: const Text('বন্ধ করুন'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  DateTime? _resolveStartTime(AppSettings settings, DateTime now) {
+    final raw = settings.fastingStartedAtIso;
+    if (raw != null && raw.trim().isNotEmpty) {
+      return DateTime.tryParse(raw)?.toLocal();
+    }
+    if (!settings.fastingEnabled) {
+      return null;
+    }
+    var candidate = DateTime(now.year, now.month, now.day, settings.fastingStartHour);
+    if (candidate.isAfter(now)) {
+      candidate = candidate.subtract(const Duration(days: 1));
+    }
+    return candidate;
+  }
+
+  Future<void> _setStartedAt(DateTime value) async {
+    final settings = widget.settings;
+    await ref.read(appSettingsProvider.notifier).save(
+          settings.copyWith(
+            fastingEnabled: true,
+            fastingStartHour: value.hour,
+            fastingStartedAtIso: value.toIso8601String(),
+          ),
+        );
+    HapticFeedback.selectionClick();
+  }
+
+  Future<void> _pickCustomStart() async {
+    final now = DateTime.now();
+    final date = await showDatePicker(
+      context: context,
+      initialDate: now,
+      firstDate: now.subtract(const Duration(days: 7)),
+      lastDate: now,
+    );
+    if (date == null || !mounted) {
+      return;
+    }
+    final time = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(now),
+    );
+    if (time == null) {
+      return;
+    }
+    final startedAt = DateTime(date.year, date.month, date.day, time.hour, time.minute);
+    await _setStartedAt(startedAt);
+  }
+
+  Future<void> _pickWindow() async {
+    final controller = TextEditingController(text: '${widget.settings.fastingWindowHours}');
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('ফাস্টিং সময় ঠিক করুন', style: AppTextStyles.cardTitle),
+            const SizedBox(height: 12),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(hintText: 'যেমন ১২, ১৪, ১৬'),
+            ),
+            const SizedBox(height: 12),
+            PrimaryButton(
+              label: 'সংরক্ষণ করুন',
+              onPressed: () async {
+                final value = int.tryParse(controller.text.trim());
+                if (value == null) {
+                  return;
+                }
+                await ref.read(appSettingsProvider.notifier).save(
+                      widget.settings.copyWith(fastingWindowHours: value.clamp(8, 24)),
+                    );
+                if (context.mounted) {
+                  Navigator.pop(context);
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDateTime(DateTime dateTime) {
+    final hour = dateTime.hour > 12 ? dateTime.hour - 12 : (dateTime.hour == 0 ? 12 : dateTime.hour);
+    final suffix = dateTime.hour >= 12 ? 'PM' : 'AM';
+    final minute = dateTime.minute.toString().padLeft(2, '0');
+    return '${dateTime.day}/${dateTime.month} $hour:$minute $suffix';
+  }
+
+  String _formatDuration(Duration duration) {
+    final hours = duration.inHours;
+    final minutes = duration.inMinutes.remainder(60);
+    if (hours <= 0) {
+      return '${BengaliFormatters.toBengaliNumber(minutes)} মিনিট';
+    }
+    return '${BengaliFormatters.toBengaliNumber(hours)} ঘ ${BengaliFormatters.toBengaliNumber(minutes)} মি';
+  }
+}
+
+class _FastingMetric extends StatelessWidget {
+  const _FastingMetric({
+    required this.title,
+    required this.value,
+    this.highlighted = false,
+  });
+
+  final String title;
+  final String value;
+  final bool highlighted;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: highlighted ? AppColors.primaryFaint : AppColors.pageBg,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: highlighted ? AppColors.primaryLight : AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: AppTextStyles.caption),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: AppTextStyles.metricSmall.copyWith(
+              color: highlighted ? AppColors.primary : AppColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DiaryCard extends StatelessWidget {
+  const _DiaryCard({
+    required this.meals,
+    required this.onOpenScan,
+  });
+
+  final List<MealLogEntry> meals;
+  final VoidCallback onOpenScan;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(15, 38, 27, 0.04),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color.fromRGBO(45, 106, 79, 0.09),
+            blurRadius: 20,
+            spreadRadius: -8,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('আজকের ডায়েরি', style: AppTextStyles.cardTitle),
+          const SizedBox(height: 12),
+          if (meals.isEmpty)
+            Text(
+              'এখনো কোনো খাবার লগ করা হয়নি।',
+              style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+            )
+          else
+            ...meals.take(4).map(
+              (meal) => Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    Text(meal.slot.icon, style: const TextStyle(fontSize: 18)),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        meal.foodName,
+                        style: AppTextStyles.body,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${meal.macros.calories.round()} kcal',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: 14),
+          PrimaryButton(
+            label: 'খাবার স্ক্যান করুন',
+            onPressed: onOpenScan,
+            icon: Icons.add_a_photo_rounded,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActivitySnapshotCard extends ConsumerWidget {
+  const _ActivitySnapshotCard({
+    required this.steps,
+    required this.sleep,
+    required this.completedExercises,
+    required this.targetSteps,
+    required this.water,
+    required this.wearableEnabled,
+  });
+
+  final StepLogRecord? steps;
+  final SleepLogRecord? sleep;
+  final int completedExercises;
+  final int targetSteps;
+  final int water;
+  final bool wearableEnabled;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stepValue = steps?.steps ?? 0;
+    final sleepValue = sleep?.hours ?? 0;
+    final activeCalories = steps?.activeCalories ?? 0;
+    final waterRemaining = (8 - water).clamp(0, 8);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(15, 38, 27, 0.04),
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+          BoxShadow(
+            color: Color.fromRGBO(45, 106, 79, 0.09),
+            blurRadius: 20,
+            spreadRadius: -8,
+            offset: Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text('আজকের অ্যাক্টিভিটি', style: AppTextStyles.cardTitle)),
+              if (wearableEnabled)
+                TextButton.icon(
+                  onPressed: () async {
+                    HapticFeedback.selectionClick();
+                    await ref.read(healthSyncServiceProvider).syncToday();
+                  },
+                  icon: const Icon(Icons.sync_rounded, size: 16),
+                  label: const Text('সিঙ্ক'),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _MiniActivity(
+                  label: 'হাঁটা',
+                  value: stepValue == 0 ? '—' : BengaliFormatters.toBengaliNumber(stepValue),
+                  subtitle: targetSteps > 0 ? '/${BengaliFormatters.toBengaliNumber(targetSteps)}' : 'আজ',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MiniActivity(
+                  label: 'ঘুম',
+                  value: sleepValue == 0 ? '—' : BengaliFormatters.toBengaliNumber(sleepValue, fractionDigits: 1),
+                  subtitle: 'ঘণ্টা',
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _MiniActivity(
+                  label: 'ব্যায়াম',
+                  value: completedExercises == 0 ? '—' : BengaliFormatters.toBengaliNumber(completedExercises),
+                  subtitle: activeCalories > 0 ? '${BengaliFormatters.toBengaliNumber(activeCalories.round())} kcal' : 'সমাপ্ত',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Text('পানি', style: AppTextStyles.bodyLarge),
+              const Spacer(),
+              Text(
+                water == 0
+                    ? 'পানি পান শুরু করুন 💧'
+                    : 'আজ ${BengaliFormatters.toBengaliNumber(water)}/৮ গ্লাস • আরও ${BengaliFormatters.toBengaliNumber(waterRemaining)} বাকি',
+                style: AppTextStyles.caption.copyWith(
+                  color: water == 0 ? AppColors.textMuted : AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: List.generate(8, (index) {
+              final filled = index < water;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: index == 7 ? 0 : 6),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () async {
+                      HapticFeedback.lightImpact();
+                      await ref.read(dailySummaryProvider.notifier).setWaterCount(index + 1);
+                    },
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: filled ? AppColors.blue : AppColors.pageBg,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: filled ? AppColors.blue : AppColors.border,
+                        ),
+                      ),
+                      alignment: Alignment.center,
+                      child: Icon(
+                        Icons.water_drop_rounded,
+                        color: filled ? AppColors.white : const Color(0xFFB2DFDB),
+                        size: filled ? 20 : 18,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+          const SizedBox(height: 10),
+          LinearProgressIndicator(
+            value: water / 8,
+            minHeight: 6,
+            borderRadius: BorderRadius.circular(999),
+            backgroundColor: AppColors.border,
+            color: AppColors.blue,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            wearableEnabled
+                ? (stepValue == 0
+                    ? 'ডিভাইস sync চালু আছে। কয়েক পা হাঁটলেই বা Health data এলে এখানে automatic update হবে।'
+                    : 'আজ ${BengaliFormatters.toBengaliNumber(stepValue)} স্টেপ হয়েছে • active ${BengaliFormatters.toBengaliNumber(activeCalories.round())} kcal')
+                : 'Wearable sync বন্ধ আছে। profile থেকে চালু করলে device data automatic আসবে।',
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniActivity extends StatelessWidget {
+  const _MiniActivity({
+    required this.label,
+    required this.value,
+    required this.subtitle,
+  });
+
+  final String label;
+  final String value;
+  final String subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.primaryFaint,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.caption),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTextStyles.metricSmall.copyWith(fontSize: 20),
+          ),
+          const SizedBox(height: 4),
+          Text(subtitle, style: AppTextStyles.caption),
+        ],
+      ),
+    );
   }
 }
 
@@ -276,407 +1077,9 @@ class _OfflineQueueCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '$countটি offline log sync-এর অপেক্ষায় আছে। ইন্টারনেট এলে এগুলো নিজে থেকেই আপডেট হবে।',
+              '$countটি offline log sync-এর অপেক্ষায় আছে। ইন্টারনেট এলেই এগুলো নিজে থেকেই update হবে।',
               style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _DoctorNoteCard extends StatelessWidget {
-  const _DoctorNoteCard({required this.note});
-
-  final DoctorNoteRecord? note;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF163B2A), Color(0xFF236144), Color(0xFF2F7C57)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(20, 67, 46, 0.20),
-            blurRadius: 28,
-            spreadRadius: -10,
-            offset: Offset(0, 16),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 42,
-                height: 42,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(Icons.medical_services_rounded, color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  note == null ? 'ডাক্তারের নোট তৈরি হচ্ছে...' : (doctorNoteCategoryLabels[note!.category] ?? 'ডাক্তারের নোট'),
-                  style: AppTextStyles.cardTitle.copyWith(color: AppColors.white),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            note?.content ?? 'AI আপনার বাস্তব ডেটা, খাবার, পানি, ঘুম আর শরীরের লক্ষ্য মিলিয়ে ব্যক্তিগত নোট তৈরি করছে।',
-            style: AppTextStyles.body.copyWith(color: AppColors.white, height: 1.55),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickStatCard extends StatelessWidget {
-  const _QuickStatCard({
-    required this.label,
-    required this.value,
-    required this.sublabel,
-    required this.background,
-    required this.icon,
-    required this.accent,
-  });
-
-  final String label;
-  final String value;
-  final String sublabel;
-  final Color background;
-  final IconData icon;
-  final Color accent;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(15, 38, 27, 0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color.fromRGBO(45, 106, 79, 0.08),
-            blurRadius: 20,
-            spreadRadius: -8,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: accent, size: 20),
-          const SizedBox(height: 12),
-          Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.metricSmall.copyWith(fontSize: 24),
-          ),
-          const SizedBox(height: 4),
-          Text(sublabel, style: AppTextStyles.caption),
-        ],
-      ),
-    );
-  }
-}
-
-class _FastingCard extends StatelessWidget {
-  const _FastingCard({required this.settings});
-
-  final AppSettings settings;
-
-  @override
-  Widget build(BuildContext context) {
-    final start = settings.fastingStartHour;
-    final end = (start + settings.fastingWindowHours) % 24;
-    final now = DateTime.now();
-    final currentMinutes = now.hour * 60 + now.minute;
-    final startMinutes = start * 60;
-    final durationMinutes = settings.fastingWindowHours * 60;
-    final elapsed = ((currentMinutes - startMinutes) % (24 * 60)).clamp(0, 24 * 60);
-    final progress = settings.fastingEnabled ? (elapsed / durationMinutes).clamp(0.0, 1.0) : 0.0;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(15, 38, 27, 0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color.fromRGBO(45, 106, 79, 0.09),
-            blurRadius: 20,
-            spreadRadius: -8,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(
-                  color: AppColors.primaryFaint,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.timer_outlined, color: AppColors.primary),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text('ইন্টারমিটেন্ট ফাস্টিং', style: AppTextStyles.cardTitle),
-              ),
-              Text(
-                settings.fastingEnabled ? '${BengaliFormatters.toBengaliNumber(settings.fastingWindowHours)}/৮' : 'বন্ধ',
-                style: AppTextStyles.caption.copyWith(
-                  color: settings.fastingEnabled ? AppColors.primary : AppColors.textMuted,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            settings.fastingEnabled
-                ? 'আজকের fasting window: ${_hourLabel(start)} - ${_hourLabel(end)}'
-                : 'ফাস্টিং timer চালু করলে এখানে আপনার eating window আর progress দেখাবে।',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: settings.fastingEnabled ? progress : 0,
-              minHeight: 8,
-              backgroundColor: AppColors.border,
-              color: AppColors.primaryLight,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _hourLabel(int hour) {
-    final normalized = hour % 24;
-    final suffix = normalized >= 12 ? 'PM' : 'AM';
-    final twelve = normalized == 0 ? 12 : normalized > 12 ? normalized - 12 : normalized;
-    return '$twelve $suffix';
-  }
-}
-
-class _DiaryCard extends StatelessWidget {
-  const _DiaryCard({
-    required this.meals,
-    required this.onOpenScan,
-  });
-
-  final List<MealLogEntry> meals;
-  final VoidCallback onOpenScan;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(15, 38, 27, 0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color.fromRGBO(45, 106, 79, 0.09),
-            blurRadius: 20,
-            spreadRadius: -8,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('আজকের ডায়েরি', style: AppTextStyles.cardTitle),
-          const SizedBox(height: 12),
-          if (meals.isEmpty)
-            Text(
-              'এখনো কোনো খাবার লগ করা হয়নি।',
-              style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
-            )
-          else
-            ...meals.take(4).map(
-              (meal) => Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Row(
-                  children: [
-                    Text(meal.slot.icon, style: const TextStyle(fontSize: 18)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        meal.foodName,
-                        style: AppTextStyles.body,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${meal.macros.calories.round()} kcal',
-                      style: AppTextStyles.caption.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          const SizedBox(height: 14),
-          PrimaryButton(
-            label: 'খাবার স্ক্যান করুন',
-            onPressed: onOpenScan,
-            icon: Icons.add_a_photo_rounded,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivitySnapshotCard extends StatelessWidget {
-  const _ActivitySnapshotCard({
-    required this.steps,
-    required this.sleep,
-    required this.completedExercises,
-    required this.targetSteps,
-    required this.water,
-    required this.wearableEnabled,
-  });
-
-  final StepLogRecord? steps;
-  final SleepLogRecord? sleep;
-  final int completedExercises;
-  final int targetSteps;
-  final int water;
-  final bool wearableEnabled;
-
-  @override
-  Widget build(BuildContext context) {
-    final stepValue = steps?.steps ?? 0;
-    final sleepValue = sleep?.hours ?? 0;
-    final activeCalories = steps?.activeCalories ?? 0;
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(15, 38, 27, 0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color.fromRGBO(45, 106, 79, 0.09),
-            blurRadius: 20,
-            spreadRadius: -8,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('আজকের অ্যাক্টিভিটি', style: AppTextStyles.cardTitle),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(child: _MiniActivity(label: 'হাঁটা', value: stepValue == 0 ? '—' : BengaliFormatters.toBengaliNumber(stepValue))),
-              const SizedBox(width: 10),
-              Expanded(child: _MiniActivity(label: 'পানি', value: water == 0 ? '—' : '${BengaliFormatters.toBengaliNumber(water)}/8')),
-              const SizedBox(width: 10),
-              Expanded(child: _MiniActivity(label: 'ঘুম', value: sleepValue == 0 ? '—' : BengaliFormatters.toBengaliNumber(sleepValue, fractionDigits: 1))),
-            ],
-          ),
-          const SizedBox(height: 14),
-          Text(
-            wearableEnabled
-                ? (stepValue == 0
-                    ? 'Health Connect / Apple Health sync থাকলে স্টেপ, ঘুম আর activity এখানে স্বয়ংক্রিয়ভাবে আসবে।'
-                    : 'আজ ${BengaliFormatters.toBengaliNumber(stepValue)} স্টেপ হয়েছে • লক্ষ্য ${BengaliFormatters.toBengaliNumber(targetSteps)} • active ${BengaliFormatters.toBengaliNumber(activeCalories.round())} kcal • ব্যায়াম ${BengaliFormatters.toBengaliNumber(completedExercises)}টি সম্পন্ন')
-                : 'Wearable sync বন্ধ আছে। profile থেকে চালু করলে device data এখানে আসবে।',
-            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MiniActivity extends StatelessWidget {
-  const _MiniActivity({
-    required this.label,
-    required this.value,
-  });
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      decoration: BoxDecoration(
-        color: AppColors.primaryFaint,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: AppTextStyles.caption),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTextStyles.metricSmall.copyWith(fontSize: 20),
           ),
         ],
       ),
@@ -693,9 +1096,9 @@ class _HomeLoadingView extends StatelessWidget {
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 18, 16, 120),
         children: const [
-          _SkeletonBox(height: 72, radius: 22),
-          SizedBox(height: 18),
-          _SkeletonBox(height: 170, radius: 24),
+          _SkeletonBox(height: 48, radius: 18),
+          SizedBox(height: 14),
+          _SkeletonBox(height: 96, radius: 22),
           SizedBox(height: 14),
           _SkeletonBox(height: 250, radius: 22),
           SizedBox(height: 14),
@@ -709,9 +1112,9 @@ class _HomeLoadingView extends StatelessWidget {
             ],
           ),
           SizedBox(height: 14),
-          _SkeletonBox(height: 168, radius: 22),
+          _SkeletonBox(height: 230, radius: 22),
           SizedBox(height: 14),
-          _SkeletonBox(height: 196, radius: 22),
+          _SkeletonBox(height: 190, radius: 22),
         ],
       ),
     );

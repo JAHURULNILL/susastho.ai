@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -64,7 +65,7 @@ class AiBackendService {
       uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(payload),
-    );
+    ).timeout(const Duration(seconds: 25));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(response.body);
@@ -147,7 +148,7 @@ class AiBackendService {
       uri,
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode(payload),
-    );
+    ).timeout(const Duration(seconds: 25));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(response.body);

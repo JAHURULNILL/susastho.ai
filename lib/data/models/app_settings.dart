@@ -17,6 +17,7 @@ class AppSettings {
     this.fastingEnabled = false,
     this.fastingStartHour = 20,
     this.fastingWindowHours = 16,
+    this.fastingStartedAtIso,
   });
 
   final bool notificationsEnabled;
@@ -30,6 +31,7 @@ class AppSettings {
   final bool fastingEnabled;
   final int fastingStartHour;
   final int fastingWindowHours;
+  final String? fastingStartedAtIso;
 
   AppSettings copyWith({
     bool? notificationsEnabled,
@@ -43,6 +45,8 @@ class AppSettings {
     bool? fastingEnabled,
     int? fastingStartHour,
     int? fastingWindowHours,
+    String? fastingStartedAtIso,
+    bool clearFastingStartedAt = false,
     bool clearCustomGoal = false,
   }) {
     return AppSettings(
@@ -57,6 +61,7 @@ class AppSettings {
       fastingEnabled: fastingEnabled ?? this.fastingEnabled,
       fastingStartHour: fastingStartHour ?? this.fastingStartHour,
       fastingWindowHours: fastingWindowHours ?? this.fastingWindowHours,
+      fastingStartedAtIso: clearFastingStartedAt ? null : fastingStartedAtIso ?? this.fastingStartedAtIso,
     );
   }
 
@@ -73,6 +78,7 @@ class AppSettings {
       'fastingEnabled': fastingEnabled,
       'fastingStartHour': fastingStartHour,
       'fastingWindowHours': fastingWindowHours,
+      'fastingStartedAtIso': fastingStartedAtIso,
     };
   }
 
@@ -91,6 +97,7 @@ class AppSettings {
       fastingEnabled: json['fastingEnabled'] as bool? ?? false,
       fastingStartHour: (json['fastingStartHour'] as num?)?.toInt() ?? 20,
       fastingWindowHours: (json['fastingWindowHours'] as num?)?.toInt() ?? 16,
+      fastingStartedAtIso: json['fastingStartedAtIso'] as String?,
     );
   }
 }

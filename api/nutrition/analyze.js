@@ -74,7 +74,7 @@ module.exports = async function handler(req, res) {
                   'তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ, health coach এবং local Bangladeshi food intelligence specialist।',
                   'সব user-visible response বাংলায় দেবে এবং valid JSON ছাড়া অন্য কিছু দেবে না।',
                   'সব analysis, alternative, menu suggestion, grocery suggestion, warning এবং doctor tip শুধু বাংলাদেশি খাবার, বাংলাদেশি রান্না ও বাংলাদেশি lifestyle context অনুযায়ী হবে।',
-                  'কোনো foreign dish, western replacement, imported diet trend বা non-Bangladeshi example ব্যবহার করবে না।',
+                  'কোনো foreign dish, western replacement বা non-Bangladeshi example ব্যবহার করবে না।',
                 ].join(' '),
               },
             ],
@@ -121,8 +121,8 @@ function buildNutritionPrompt({
 
   const recentMealText = Array.isArray(recentMeals) && recentMeals.length > 0
     ? recentMeals
-        .map((meal) => `- ${meal.date || ''} ${meal.slot || ''}: ${meal.foodName || ''} (${meal.calories || 0} kcal)`)
-        .join('\n')
+      .map((meal) => `- ${meal.date || ''} ${meal.slot || ''}: ${meal.foodName || ''} (${meal.calories || 0} kcal)`)
+      .join('\n')
     : 'সাম্প্রতিক কোনো মিল হিস্ট্রি নেই';
 
   const localFoodKnowledge = buildLocalFoodKnowledge(description || '');
@@ -151,11 +151,11 @@ ${localFoodKnowledge}
 নিয়ম:
 1. generic analysis করবে না।
 2. দেশীয় mixed plate হলে ভাত, ডাল, মাছ, মাংস, শাক, ভর্তা আলাদা reasoning দেবে।
-3. user-এর সমস্যা অনুযায়ী instant red flag থাকলে clearভাবে বলবে।
+3. user-এর সমস্যার অনুযায়ী instant red flag থাকলে clearভাবে বলবে।
 4. recent pattern থাকলে memory_insight-এ সেটা ব্যবহার করবে।
 5. budget-friendly deshi বিকল্প থাকলে alternative-এ বলবে।
-6. local food knowledge base-এ ২০০টির বেশি দেশীয় খাবার আছে; reasoning করার সময় এই knowledge base-কে priority দেবে।
-7. alternative, best_choice, grocery_suggestions, menu_suggestions এবং doctor_tip-এ কোনো foreign food দেবে না। সবসময় Bangladeshi local food দেবে।
+6. local food knowledge base-এর ২০০টির বেশি দেশীয় খাবারকে priority দেবে।
+7. alternative, best_choice, grocery_suggestions, menu_suggestions এবং doctor_tip-এ কোনো foreign food দেবে না।
 `;
 
   if (mode === 'menu') {
@@ -221,6 +221,7 @@ ${description ? `User লিখেছে: "${description}"` : 'ছবি থে�
 
 ইনপুটটি একটি খাবার বা mixed Bangladeshi plate।
 ${description ? `User লিখেছে: "${description}"` : 'ছবি দেখে খাবার বিশ্লেষণ করো।'}
+${description ? 'গুরুত্বপূর্ণ: যদি description দেওয়া থাকে, তাহলে সেই লেখাকেই প্রধান input হিসেবে ধরে নির্দিষ্ট খাবার, portion এবং context বোঝো। শুধু text input থেকেও পূর্ণ nutrition analysis দেবে।' : ''}
 
 শুধু valid JSON দাও:
 {
@@ -246,7 +247,7 @@ ${description ? `User লিখেছে: "${description}"` : 'ছবি দে�
   "portion_advice": "কতটুকু খাওয়া উচিত",
   "alternative": "আরও স্বাস্থ্যকর দেশীয় বিকল্প",
   "best_choice": "এই খাবারের সেরা অংশ",
-  "budget_impact": "বাজেট বিষয়ে insight",
+  "budget_impact": "বাজেট বিষয়ক insight",
   "remaining_after": 0
 }`;
 }

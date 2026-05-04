@@ -15,48 +15,44 @@ class GreetingHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateText = DateFormat('dd MMMM').format(DateTime.now());
-    final initial = profile.name.trim().isEmpty ? 'S' : profile.name.trim().characters.first.toUpperCase();
+    final now = DateTime.now();
+    final dateText = DateFormat('dd MMMM').format(now);
+    final greeting = switch (now.hour) {
+      < 6 => 'শুভ রাত',
+      < 12 => 'শুভ সকাল',
+      < 17 => 'শুভ দুপুর',
+      < 21 => 'শুভ সন্ধ্যা',
+      _ => 'শুভ রাত',
+    };
 
-    return Row(
+    final shortName = profile.name.trim().split(' ').first;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('আজ', style: AppTextStyles.caption.copyWith(letterSpacing: 0.2)),
-              const SizedBox(height: 4),
-              Text(profile.name, style: AppTextStyles.screenTitle.copyWith(fontSize: 30)),
-              const SizedBox(height: 4),
-              Text(dateText, style: AppTextStyles.caption),
-            ],
+        Text(
+          dateText,
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.textMuted,
+            letterSpacing: 0.1,
           ),
         ),
-        Container(
-          width: 54,
-          height: 54,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [AppColors.primary, AppColors.primaryLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: const [
-              BoxShadow(
-                color: Color.fromRGBO(27, 94, 59, 0.18),
-                blurRadius: 12,
-                offset: Offset(0, 4),
+        const SizedBox(height: 6),
+        RichText(
+          text: TextSpan(
+            children: [
+              TextSpan(
+                text: '$greeting, ',
+                style: AppTextStyles.bodyLarge.copyWith(
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextSpan(
+                text: shortName,
+                style: AppTextStyles.screenTitle.copyWith(fontSize: 28),
               ),
             ],
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            initial,
-            style: AppTextStyles.metricSmall.copyWith(
-              color: AppColors.white,
-              fontSize: 24,
-            ),
           ),
         ),
       ],
