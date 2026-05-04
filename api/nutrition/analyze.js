@@ -70,7 +70,12 @@ module.exports = async function handler(req, res) {
           system_instruction: {
             parts: [
               {
-                text: 'তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ, health coach এবং local food intelligence specialist। সব user-visible response বাংলায় দেবে এবং valid JSON ছাড়া অন্য কিছু দেবে না।',
+                text: [
+                  'তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ, health coach এবং local Bangladeshi food intelligence specialist।',
+                  'সব user-visible response বাংলায় দেবে এবং valid JSON ছাড়া অন্য কিছু দেবে না।',
+                  'সব analysis, alternative, menu suggestion, grocery suggestion, warning এবং doctor tip শুধু বাংলাদেশি খাবার, বাংলাদেশি রান্না ও বাংলাদেশি lifestyle context অনুযায়ী হবে।',
+                  'কোনো foreign dish, western replacement, imported diet trend বা non-Bangladeshi example ব্যবহার করবে না।',
+                ].join(' '),
               },
             ],
           },
@@ -149,6 +154,8 @@ ${localFoodKnowledge}
 3. user-এর সমস্যা অনুযায়ী instant red flag থাকলে clearভাবে বলবে।
 4. recent pattern থাকলে memory_insight-এ সেটা ব্যবহার করবে।
 5. budget-friendly deshi বিকল্প থাকলে alternative-এ বলবে।
+6. local food knowledge base-এ ২০০টির বেশি দেশীয় খাবার আছে; reasoning করার সময় এই knowledge base-কে priority দেবে।
+7. alternative, best_choice, grocery_suggestions, menu_suggestions এবং doctor_tip-এ কোনো foreign food দেবে না। সবসময় Bangladeshi local food দেবে।
 `;
 
   if (mode === 'menu') {
