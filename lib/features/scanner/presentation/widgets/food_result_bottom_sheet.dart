@@ -9,8 +9,10 @@ import '../../../../core/utils/bengali_formatters.dart';
 import '../../../../core/widgets/info_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../data/models/food_analysis_result.dart';
+import '../../../../data/models/daily_summary.dart';
 import '../../../home/presentation/screens/home_shell.dart';
 import '../../../home/providers/home_provider.dart';
+import '../../providers/scanner_provider.dart';
 
 class FoodResultBottomSheet extends ConsumerWidget {
   const FoodResultBottomSheet({
@@ -291,9 +293,11 @@ class FoodResultBottomSheet extends ConsumerWidget {
                 icon: result.analysisMode == 'meal' ? Icons.add_circle_outline_rounded : Icons.check_circle_outline_rounded,
                 onPressed: result.analysisMode == 'meal'
                     ? () async {
+                        final mealSlot = ref.read(scannerProvider).mealSlot;
                         await ref.read(dailySummaryProvider.notifier).addMeal(
                               result,
                               imagePath: imagePath,
+                              slot: mealSlot,
                             );
                         ref.read(navigationTabProvider.notifier).setTab(0);
                         if (context.mounted) {

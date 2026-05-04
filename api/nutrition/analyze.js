@@ -29,6 +29,8 @@ module.exports = async function handler(req, res) {
       healthContext = {},
     } = req.body ?? {};
 
+    const normalizedDescription = normalizeBanglaDescription(description || '');
+
     if ((!imageBase64 || !mimeType) && !description) {
       return res.status(400).json({ error: 'imageBase64/mimeType অথবা description প্রয়োজন।' });
     }
@@ -44,6 +46,7 @@ module.exports = async function handler(req, res) {
     const prompt = buildNutritionPrompt({
       profile,
       description,
+      normalizedDescription,
       consumedCalories,
       remainingCalories,
       mode,
@@ -52,6 +55,7 @@ module.exports = async function handler(req, res) {
     });
 
     const parts = [{ text: prompt }];
+
     if (imageBase64 && mimeType) {
       parts.push({
         inline_data: {
@@ -81,7 +85,7 @@ module.exports = async function handler(req, res) {
           },
           contents: [{ parts }],
           generationConfig: {
-            temperature: 0.22,
+            temperature: 0.2,
             response_mime_type: 'application/json',
           },
         }),
@@ -89,9 +93,12 @@ module.exports = async function handler(req, res) {
     );
 
     const json = await response.json();
+
     if (!response.ok) {
       return res.status(response.status).json({ error: json });
     }
+
+    const analysis = safeJsonParse(extractText(json));
 
     return res.status(200).json({
       model: {
@@ -99,7 +106,7 @@ module.exports = async function handler(req, res) {
         name: 'Gemini',
         version: geminiModel,
       },
-      analysis: safeJsonParse(extractText(json)),
+      analysis,
     });
   } catch (error) {
     return res.status(500).json({ error: stringifyError(error) });
@@ -109,6 +116,7 @@ module.exports = async function handler(req, res) {
 function buildNutritionPrompt({
   profile,
   description,
+  normalizedDescription,
   consumedCalories,
   remainingCalories,
   mode,
@@ -125,7 +133,7 @@ function buildNutritionPrompt({
       .join('\n')
     : 'সাম্প্রতিক কোনো মিল হিস্ট্রি নেই';
 
-  const localFoodKnowledge = buildLocalFoodKnowledge(description || '');
+  const localFoodKnowledge = buildLocalFoodKnowledge(normalizedDescription || description || '');
 
   const base = `
 ইউজারের তথ্য:
@@ -150,12 +158,15 @@ ${localFoodKnowledge}
 
 নিয়ম:
 1. generic analysis করবে না।
-2. দেশীয় mixed plate হলে ভাত, ডাল, মাছ, মাংস, শাক, ভর্তা আলাদা reasoning দেবে।
-3. user-এর সমস্যার অনুযায়ী instant red flag থাকলে clearভাবে বলবে।
-4. recent pattern থাকলে memory_insight-এ সেটা ব্যবহার করবে।
-5. budget-friendly deshi বিকল্প থাকলে alternative-এ বলবে।
-6. local food knowledge base-এর ২০০টির বেশি দেশীয় খাবারকে priority দেবে।
-7. alternative, best_choice, grocery_suggestions, menu_suggestions এবং doctor_tip-এ কোনো foreign food দেবে না।
+2. user Roman Bangla, Bangla বা mixed spelling-এ লিখতে পারে। আগে সেটা বাংলাদেশি খাবারের বাস্তব নাম হিসেবে বুঝে নেবে।
+3. যদি user একাধিক meal একসাথে লিখে, combined intake ধরে হিসাব করবে।
+4. mixed plate হলে ভাত, ডাল, মাছ, মাংস, শাক, ভর্তা আলাদা reasoning দেবে।
+5. user-এর সমস্যার অনুযায়ী instant red flag থাকলে clearভাবে বলবে।
+6. recent pattern থাকলে memory_insight-এ সেটা ব্যবহার করবে।
+7. budget-friendly deshi বিকল্প থাকলে alternative-এ বলবে।
+8. local food knowledge base-এর দেশীয় খাবারগুলোকে priority দেবে।
+9. alternative, best_choice, grocery_suggestions, menu_suggestions এবং doctor_tip-এ foreign food দেবে না।
+10. valid JSON ছাড়া অন্য কোনো text দেবে না।
 `;
 
   if (mode === 'menu') {
@@ -163,6 +174,7 @@ ${localFoodKnowledge}
 
 ইনপুটটি restaurant menu বা food option list।
 ${description ? `User লিখেছে: "${description}"` : 'ছবি থেকে menu পড়ে বোঝো।'}
+${normalizedDescription && normalizedDescription !== description ? `বোঝা normalized রূপ: "${normalizedDescription}"` : ''}
 
 শুধু valid JSON দাও:
 {
@@ -193,6 +205,7 @@ ${description ? `User লিখেছে: "${description}"` : 'ছবি থে�
 
 ইনপুটটি বাজার বা restaurant receipt।
 ${description ? `User লিখেছে: "${description}"` : 'ছবি থেকে receipt পড়ে বোঝো।'}
+${normalizedDescription && normalizedDescription !== description ? `বোঝা normalized রূপ: "${normalizedDescription}"` : ''}
 
 শুধু valid JSON দাও:
 {
@@ -221,7 +234,8 @@ ${description ? `User লিখেছে: "${description}"` : 'ছবি থে�
 
 ইনপুটটি একটি খাবার বা mixed Bangladeshi plate।
 ${description ? `User লিখেছে: "${description}"` : 'ছবি দেখে খাবার বিশ্লেষণ করো।'}
-${description ? 'গুরুত্বপূর্ণ: যদি description দেওয়া থাকে, তাহলে সেই লেখাকেই প্রধান input হিসেবে ধরে নির্দিষ্ট খাবার, portion এবং context বোঝো। শুধু text input থেকেও পূর্ণ nutrition analysis দেবে।' : ''}
+${normalizedDescription && normalizedDescription !== description ? `বোঝা normalized রূপ: "${normalizedDescription}"` : ''}
+${description ? 'গুরুত্বপূর্ণ: description থাকলে সেটাকেই প্রধান input হিসেবে ধরে নির্দিষ্ট খাবার, meal slot, portion এবং context বোঝো। শুধু text input থেকেও পূর্ণ nutrition analysis দেবে।' : ''}
 
 শুধু valid JSON দাও:
 {
@@ -257,9 +271,11 @@ function extractText(payload) {
   const text = Array.isArray(parts)
     ? parts.map((part) => part?.text).filter(Boolean).join('\n')
     : '';
+
   if (!text) {
     throw new Error('Gemini response is empty.');
   }
+
   return text;
 }
 
@@ -267,12 +283,47 @@ function safeJsonParse(text) {
   const cleaned = String(text).replace(/```json/g, '').replace(/```/g, '').trim();
   const start = cleaned.indexOf('{');
   const end = cleaned.lastIndexOf('}');
+
   if (start === -1 || end === -1) {
     throw new Error('Model JSON parse failed.');
   }
+
   return JSON.parse(cleaned.slice(start, end + 1));
 }
 
 function stringifyError(error) {
   return error instanceof Error ? error.message : String(error);
+}
+
+function normalizeBanglaDescription(input) {
+  return String(input || '')
+    .toLowerCase()
+    .replace(/\bvaat\b/g, 'ভাত')
+    .replace(/\bbhat\b/g, 'ভাত')
+    .replace(/\bdupure\b/g, 'দুপুরে')
+    .replace(/\bdupur\b/g, 'দুপুর')
+    .replace(/\bshokale\b/g, 'সকালে')
+    .replace(/\bsokale\b/g, 'সকালে')
+    .replace(/\brate\b/g, 'রাতে')
+    .replace(/\bnoina\b/g, 'নয়না')
+    .replace(/\bnoyna\b/g, 'নয়না')
+    .replace(/\bmach\b/g, 'মাছ')
+    .replace(/\bmaach\b/g, 'মাছ')
+    .replace(/\bjhol\b/g, 'ঝোল')
+    .replace(/\bdal\b/g, 'ডাল')
+    .replace(/\bdim\b/g, 'ডিম')
+    .replace(/\bgorur mangsho\b/g, 'গরুর মাংস')
+    .replace(/\bmurgi\b/g, 'মুরগি')
+    .replace(/\bkola\b/g, 'কলা')
+    .replace(/\bdudh\b/g, 'দুধ')
+    .replace(/\bpanta\b/g, 'পান্তা')
+    .replace(/\bbhorta\b/g, 'ভর্তা')
+    .replace(/\bshak\b/g, 'শাক')
+    .replace(/\bchola\b/g, 'ছোলা')
+    .replace(/\bpeyara\b/g, 'পেয়ারা')
+    .replace(/\bkomla\b/g, 'কমলা')
+    .replace(/\bmalta\b/g, 'মাল্টা')
+    .replace(/\bkacchi\b/g, 'কাচ্চি')
+    .replace(/\bborhani\b/g, 'বোরহানি')
+    .trim();
 }

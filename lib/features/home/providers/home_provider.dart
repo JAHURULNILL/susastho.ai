@@ -65,8 +65,16 @@ class DailySummaryNotifier extends AsyncNotifier<DailySummary> {
     return DailySummary(dateKey: _dateKey, meals: _meals, waterGlasses: _water);
   }
 
-  Future<void> addMeal(FoodAnalysisResult result, {String? imagePath}) async {
-    await ref.read(dailySummaryRepositoryProvider).addMeal(result, imagePath: imagePath);
+  Future<void> addMeal(
+    FoodAnalysisResult result, {
+    String? imagePath,
+    MealSlot? slot,
+  }) async {
+    await ref.read(dailySummaryRepositoryProvider).addMeal(
+          result,
+          imagePath: imagePath,
+          slot: slot,
+        );
   }
 
   Future<void> setWaterCount(int glasses) async {
@@ -103,7 +111,16 @@ final todayExercisesProvider = StreamProvider<List<WeeklyExerciseItem>>((ref) {
   return ref.watch(plannerRepositoryProvider).watchTodayExercises();
 });
 
+final doctorNoteTickerProvider = StreamProvider<DateTime>((ref) async* {
+  yield DateTime.now();
+  yield* Stream<DateTime>.periodic(
+    const Duration(minutes: 10),
+    (_) => DateTime.now(),
+  );
+});
+
 final activeDoctorNoteProvider = FutureProvider<DoctorNoteRecord?>((ref) async {
+  ref.watch(doctorNoteTickerProvider);
   final profile = ref.watch(userProfileProvider).asData?.value;
   final summary = ref.watch(dailySummaryProvider).asData?.value;
   final exercises = ref.watch(todayExercisesProvider).asData?.value ?? const <WeeklyExerciseItem>[];

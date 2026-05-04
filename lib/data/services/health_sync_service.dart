@@ -61,10 +61,12 @@ class HealthSyncService {
       }
     }
 
-    await _repository.saveSteps(
-      steps,
-      activeCalories: activeCalories > 0 ? activeCalories : null,
-    );
+    if (steps > 0 || activeCalories > 0) {
+      await _repository.saveSteps(
+        steps,
+        activeCalories: activeCalories > 0 ? activeCalories : null,
+      );
+    }
 
     if (sleepHours > 0) {
       await _repository.saveSleep(

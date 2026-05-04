@@ -151,15 +151,41 @@ class HealthMetricsRepository {
       return;
     }
 
+    final existing = await ref.get();
+    final existingData = existing.data();
+    final existingSteps = (existingData?['steps'] as num?)?.toInt() ?? 0;
+    final existingActiveCalories = (existingData?['activeCalories'] as num?)?.toDouble() ?? 0;
+    final cacheKey = _stepsCacheKey;
+    final cachedData = cacheKey == null ? null : await _storage.readJson(cacheKey);
+    final cachedSteps = (cachedData?['steps'] as num?)?.toInt() ?? 0;
+    final cachedActiveCalories = (cachedData?['activeCalories'] as num?)?.toDouble() ?? 0;
+    final nextSteps = [steps, existingSteps, cachedSteps].reduce((value, element) => value > element ? value : element);
+    final nextActiveCalories = [
+      activeCalories ?? 0,
+      existingActiveCalories,
+      cachedActiveCalories,
+    ].reduce((value, element) => value > element ? value : element);
+
     await ref.set(
       {
-        'steps': steps,
-        ...?activeCalories == null ? null : {'activeCalories': activeCalories},
+        'steps': nextSteps,
+        'activeCalories': nextActiveCalories,
         'dateKey': todayKey,
         'updatedAt': FieldValue.serverTimestamp(),
       },
       SetOptions(merge: true),
     );
+
+    if (cacheKey != null) {
+      await _storage.saveJson(
+        cacheKey,
+        {
+          'steps': nextSteps,
+          'activeCalories': nextActiveCalories,
+          'dateKey': todayKey,
+        },
+      );
+    }
   }
 
   Future<void> addWeightEntry(double weightKg) async {

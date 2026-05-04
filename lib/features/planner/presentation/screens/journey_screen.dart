@@ -12,6 +12,7 @@ import '../../../../core/widgets/fade_up_item.dart';
 import '../../../../core/widgets/info_card.dart';
 import '../../../../data/models/health_metrics.dart';
 import '../../../../data/models/user_profile.dart';
+import '../../../../data/models/wellness_routine.dart';
 import '../../../../data/models/wellness_snapshot.dart';
 import '../../../../shared/providers/app_state_provider.dart';
 import '../../../home/providers/home_provider.dart';
@@ -28,6 +29,7 @@ class JourneyScreen extends ConsumerWidget {
     final profile = ref.watch(userProfileProvider).asData?.value;
     final weightHistory = ref.watch(weightHistoryProvider).asData?.value ?? const <WeightHistoryEntry>[];
     final wellness = ref.watch(wellnessSnapshotProvider).asData?.value;
+    final wellnessPlan = ref.watch(wellnessRoutineProvider).asData?.value;
     final summary = dashboard?.summary;
     final dailyGoal = profile?.dailyCalorieTarget ?? 0;
     final avgCalories = _averageWeeklyCalories(weeklyCalories);
@@ -83,6 +85,12 @@ class JourneyScreen extends ConsumerWidget {
         weekData: _buildWeekBars(weeklyCalories),
         dailyGoal: dailyGoal.toDouble(),
       ),
+      if (wellnessPlan != null) _WellnessOverviewCard(plan: wellnessPlan),
+      if (wellnessPlan != null)
+        _WellnessSystemSection(
+          plan: wellnessPlan,
+          onToggle: (type) => ref.read(wellnessRoutineProvider.notifier).toggle(type),
+        ),
       _WeightTrendCard(entries: weightHistory),
       _HealthGoalProgress(
         profile: profile,
@@ -420,6 +428,294 @@ class _WeightTrendCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _WellnessOverviewCard extends StatelessWidget {
+  const _WellnessOverviewCard({required this.plan});
+
+  final WellnessRoutinePlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final nextBadgeAt = ((plan.totalScore ~/ 100) + 1) * 100;
+    final remaining = nextBadgeAt - plan.totalScore;
+
+    return InfoCard(
+      backgroundColor: AppColors.primaryFaint,
+      borderColor: AppColors.primaryLight,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('আজকের Wellness Journey', style: AppTextStyles.cardTitle),
+          const SizedBox(height: 10),
+          Text(plan.progressMessage, style: AppTextStyles.body),
+          const SizedBox(height: 14),
+          Row(
+            children: [
+              Expanded(
+                child: _JourneyMilestone(
+                  label: 'আজকের পয়েন্ট',
+                  value: '${plan.earnedPoints}/${plan.totalPoints}',
+                  accent: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _JourneyMilestone(
+                  label: 'ব্যাজ',
+                  value: plan.badgesEarned == 0 ? '—' : '${plan.badgesEarned}',
+                  accent: AppColors.amber,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(99),
+            child: LinearProgressIndicator(
+              value: plan.progressRatio.clamp(0, 1),
+              minHeight: 10,
+              backgroundColor: AppColors.border,
+              color: AppColors.primaryLight,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            remaining <= 0
+                ? 'নতুন ব্যাজ unlocked হয়েছে।'
+                : 'আর $remaining পয়েন্ট হলে পরের ব্যাজ পাবেন।',
+            style: AppTextStyles.caption.copyWith(color: AppColors.primary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WellnessSystemSection extends StatelessWidget {
+  const _WellnessSystemSection({
+    required this.plan,
+    required this.onToggle,
+  });
+
+  final WellnessRoutinePlan plan;
+  final void Function(WellnessRoutineType type) onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Wellness System', style: AppTextStyles.cardTitle),
+              const SizedBox(height: 14),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: plan.entries.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                  childAspectRatio: 0.95,
+                ),
+                itemBuilder: (context, index) => _WellnessModuleCard(entry: plan.entries[index]),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.cardGap),
+        InfoCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('আজকের অনুশীলন তালিকা', style: AppTextStyles.cardTitle),
+              const SizedBox(height: 14),
+              for (var i = 0; i < plan.entries.length; i++) ...[
+                _WellnessTaskRow(
+                  entry: plan.entries[i],
+                  onToggle: () => onToggle(plan.entries[i].type),
+                ),
+                if (i != plan.entries.length - 1) const Divider(height: 22, color: AppColors.border),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _WellnessModuleCard extends StatelessWidget {
+  const _WellnessModuleCard({required this.entry});
+
+  final WellnessRoutineEntry entry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.border),
+        boxShadow: const [
+          BoxShadow(
+            color: Color.fromRGBO(13, 44, 28, 0.04),
+            offset: Offset(0, 2),
+            blurRadius: 10,
+          ),
+          BoxShadow(
+            color: Color.fromRGBO(45, 106, 79, 0.10),
+            offset: Offset(0, 12),
+            blurRadius: 24,
+            spreadRadius: -12,
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(entry.type.iconEmoji, style: const TextStyle(fontSize: 20)),
+          const SizedBox(height: 10),
+          Text(entry.type.labelBn, style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(entry.type.subtitleBn, style: AppTextStyles.caption),
+          const SizedBox(height: 8),
+          Text(
+            entry.benefit,
+            style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const Spacer(),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${entry.minutes} মিনিট',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: entry.completed ? AppColors.primaryPale : AppColors.primaryFaint,
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(
+                  entry.completed ? 'সম্পন্ন' : '+${entry.points}',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WellnessTaskRow extends StatelessWidget {
+  const _WellnessTaskRow({
+    required this.entry,
+    required this.onToggle,
+  });
+
+  final WellnessRoutineEntry entry;
+  final VoidCallback onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        GestureDetector(
+          onTap: onToggle,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: entry.completed ? AppColors.primary : AppColors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: entry.completed ? AppColors.primary : AppColors.border),
+            ),
+            child: Icon(
+              Icons.check_rounded,
+              size: 18,
+              color: entry.completed ? AppColors.white : AppColors.textMuted,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(entry.timeLabel, style: AppTextStyles.caption.copyWith(color: AppColors.primary)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      entry.title,
+                      style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Text(entry.instructions, style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primaryFaint,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${entry.points} পয়েন্ট',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.amberPale,
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '${entry.streakDays} দিন streak',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.amber,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

@@ -16,6 +16,7 @@ import '../../data/repositories/app_settings_repository.dart';
 import '../../data/repositories/health_metrics_repository.dart';
 import '../../data/repositories/planner_repository.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../../data/repositories/wellness_routine_repository.dart';
 import '../../data/services/activity_tracking_service.dart';
 import '../../data/services/ai_backend_service.dart';
 import '../../data/services/firebase_bootstrap_service.dart';
@@ -161,6 +162,11 @@ final plannerRepositoryProvider = Provider<PlannerRepository>((ref) {
     dailySummaryRepository: dailySummaryRepository,
     healthMetricsRepository: healthMetricsRepository,
   );
+});
+
+final wellnessRoutineRepositoryProvider = Provider<WellnessRoutineRepository>((ref) {
+  final storage = ref.watch(localStorageServiceProvider);
+  return WellnessRoutineRepository(storage);
 });
 
 final doctorNoteRepositoryProvider = Provider<DoctorNoteRepository>((ref) {

@@ -25,7 +25,7 @@ class DoctorNoteRepository {
         _dailySummaryRepository = dailySummaryRepository,
         _healthMetricsRepository = healthMetricsRepository;
 
-  static const Duration noteTtl = Duration(minutes: 45);
+  static const Duration noteTtl = Duration(minutes: 10);
 
   final FirebaseAuth? _auth;
   final FirebaseFirestore? _firestore;

@@ -5,11 +5,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_design.dart';
+import '../../../../data/models/daily_summary.dart';
 import '../../../../shared/providers/app_state_provider.dart';
 import '../../providers/home_provider.dart';
 import '../../../planner/presentation/screens/journey_screen.dart';
 import '../../../planner/presentation/screens/weekly_planner_screen.dart';
 import '../../../profile/presentation/screens/profile_screen.dart';
+import '../../../scanner/providers/scanner_provider.dart';
 import '../../../scanner/presentation/screens/scanner_screen.dart';
 import 'home_screen.dart';
 
@@ -98,7 +100,11 @@ class HomeShell extends ConsumerWidget {
                     Expanded(
                       child: Center(
                         child: GestureDetector(
-                          onTap: () => ref.read(navigationTabProvider.notifier).setTab(2),
+                          onTap: () {
+                            ref.read(scannerProvider.notifier).setMode(ScanInputMode.meal);
+                            ref.read(scannerProvider.notifier).setMealSlot(MealSlotX.fromHour(DateTime.now().hour));
+                            ref.read(navigationTabProvider.notifier).setTab(2);
+                          },
                           child: Container(
                             width: 60,
                             height: 60,
@@ -158,7 +164,16 @@ class HomeShell extends ConsumerWidget {
     switch (index) {
       case 0:
         return HomeScreen(
-          onOpenScan: () => ref.read(navigationTabProvider.notifier).setTab(2),
+          onOpenScan: () {
+            ref.read(scannerProvider.notifier).setMode(ScanInputMode.meal);
+            ref.read(scannerProvider.notifier).setMealSlot(MealSlotX.fromHour(DateTime.now().hour));
+            ref.read(navigationTabProvider.notifier).setTab(2);
+          },
+          onOpenMealSlot: (slot) {
+            ref.read(scannerProvider.notifier).setMode(ScanInputMode.meal);
+            ref.read(scannerProvider.notifier).setMealSlot(slot);
+            ref.read(navigationTabProvider.notifier).setTab(2);
+          },
         );
       case 1:
         return const WeeklyPlannerScreen();
@@ -170,7 +185,16 @@ class HomeShell extends ConsumerWidget {
         return const ProfileScreen();
       default:
         return HomeScreen(
-          onOpenScan: () => ref.read(navigationTabProvider.notifier).setTab(2),
+          onOpenScan: () {
+            ref.read(scannerProvider.notifier).setMode(ScanInputMode.meal);
+            ref.read(scannerProvider.notifier).setMealSlot(MealSlotX.fromHour(DateTime.now().hour));
+            ref.read(navigationTabProvider.notifier).setTab(2);
+          },
+          onOpenMealSlot: (slot) {
+            ref.read(scannerProvider.notifier).setMode(ScanInputMode.meal);
+            ref.read(scannerProvider.notifier).setMealSlot(slot);
+            ref.read(navigationTabProvider.notifier).setTab(2);
+          },
         );
     }
   }

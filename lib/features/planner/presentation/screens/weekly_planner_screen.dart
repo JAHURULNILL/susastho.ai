@@ -6,6 +6,7 @@ import '../../../../core/constants/app_design.dart';
 import '../../../../core/utils/bengali_formatters.dart';
 import '../../../../core/widgets/fade_up_item.dart';
 import '../../../../core/widgets/info_card.dart';
+import '../../../../data/models/user_profile.dart';
 import '../../../../data/models/weekly_plan.dart';
 import '../../../../shared/providers/app_state_provider.dart';
 import '../../../home/providers/home_provider.dart';
@@ -16,71 +17,63 @@ class WeeklyPlannerScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final mealPlan = ref.watch(weeklyMealPlanProvider);
-    final exercises = ref.watch(todayExercisesProvider).asData?.value ?? const <WeeklyExerciseItem>[];
-    final completionCount = exercises.where((item) => item.completed).length.clamp(0, 7);
+    final profile = ref.watch(userProfileProvider).asData?.value;
+    final planAsync = ref.watch(weeklyMealPlanProvider);
+    final exerciseItems = ref.watch(todayExercisesProvider).asData?.value ?? const <WeeklyExerciseItem>[];
+
+    if (profile == null) {
+      return const SizedBox.shrink();
+    }
+
+    final plan = planAsync.asData?.value;
+    final renderPlan = plan ?? _buildPreviewPlan(profile);
+    final renderExercises = exerciseItems.isNotEmpty ? exerciseItems : _buildPreviewExercises(profile);
+    final completedCount = renderExercises.where((item) => item.completed).length;
+    final points = completedCount * 10;
+    final badgeCount = points ~/ 100;
+    final todayKey = _todayWeekKey();
+    final todayPlan = renderPlan.days[todayKey];
 
     final widgets = <Widget>[
-      _WeeklyProgressHeader(completedDays: completionCount),
-      mealPlan.when(
-        data: (plan) {
-          if (plan == null) {
-            return const _EmptyDataCard(
-              title: 'এই সপ্তাহের খাবার পরিকল্পনা এখনো তৈরি হয়নি',
-              message: 'প্রোফাইল সম্পূর্ণ থাকলে এই সপ্তাহের ব্যক্তিগত meal plan এখানে দেখা যাবে।',
-            );
-          }
-
-          final todayKey = _todayWeekKey();
-          final todayPlan = plan.days[todayKey];
-
-          return Column(
-            children: [
-              _PlanHeroCard(plan: plan, todayPlan: todayPlan),
-              const SizedBox(height: AppSpacing.cardGap),
-              if (todayPlan == null)
-                const _EmptyDataCard(
-                  title: 'আজকের প্ল্যান পাওয়া যায়নি',
-                  message: 'এই সপ্তাহের প্ল্যানে আজকের entry নেই।',
-                )
-              else
-                _TodayPlanSection(dayPlan: todayPlan),
-              const SizedBox(height: AppSpacing.cardGap),
-              _WeeklyCalendar(plan: plan, todayKey: todayKey),
-              if (plan.weeklyTips.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.cardGap),
-                _TipsCard(tips: plan.weeklyTips),
-              ],
-              if (plan.specialNotes.trim().isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.cardGap),
-                InfoCard(
-                  backgroundColor: AppColors.primaryFaint,
-                  borderColor: AppColors.primaryLight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('বিশেষ নোট', style: AppTextStyles.cardTitle),
-                      const SizedBox(height: 10),
-                      Text(plan.specialNotes, style: AppTextStyles.body),
-                    ],
-                  ),
-                ),
-              ],
-            ],
-          );
-        },
-        loading: () => const _LoadingCard(title: 'AI meal plan তৈরি হচ্ছে...'),
-        error: (error, stackTrace) => _EmptyDataCard(
-          title: 'প্ল্যান আনা যায়নি',
-          message: _friendlyError(error),
-        ),
+      _WeeklyProgressHeader(
+        completedItems: completedCount,
+        totalItems: renderExercises.length,
+        points: points,
+        badgeCount: badgeCount,
       ),
-      exercises.isEmpty
-          ? const _EmptyDataCard(
-              title: 'আজকের ব্যায়াম এখনো তৈরি হয়নি',
-              message: 'AI আপনার প্রোফাইল অনুযায়ী আজকের ব্যায়াম তৈরি করলে এখানে দেখাবে।',
-            )
-          : _ExerciseCard(exercises: exercises),
+      _PlanHeroCard(
+        profile: profile,
+        plan: renderPlan,
+        todayPlan: todayPlan,
+      ),
+      if (todayPlan != null) ...[
+        _MacroGoalCard(profile: profile),
+        _TodayPlanSection(dayPlan: todayPlan),
+      ],
+      _WeeklyCalendar(plan: renderPlan, todayKey: todayKey),
+      if (renderPlan.weeklyTips.isNotEmpty) _TipsCard(tips: renderPlan.weeklyTips),
+      if (renderPlan.specialNotes.trim().isNotEmpty)
+        InfoCard(
+          backgroundColor: AppColors.primaryFaint,
+          borderColor: AppColors.primaryLight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('এই সপ্তাহের বিশেষ গাইড', style: AppTextStyles.cardTitle),
+              const SizedBox(height: 10),
+              Text(renderPlan.specialNotes, style: AppTextStyles.body),
+            ],
+          ),
+        ),
+      _ExerciseRoadmapCard(
+        exercises: renderExercises,
+        onToggle: (item, completed) async {
+          if (item.id.isEmpty) {
+            return;
+          }
+          await ref.read(plannerRepositoryProvider).toggleExercise(item.id, completed);
+        },
+      ),
     ];
 
     return ListView.builder(
@@ -101,10 +94,12 @@ class WeeklyPlannerScreen extends ConsumerWidget {
 
 class _PlanHeroCard extends StatelessWidget {
   const _PlanHeroCard({
+    required this.profile,
     required this.plan,
     required this.todayPlan,
   });
 
+  final UserProfile profile;
   final WeeklyMealPlan plan;
   final WeeklyMealPlanDay? todayPlan;
 
@@ -113,23 +108,22 @@ class _PlanHeroCard extends StatelessWidget {
     final totalToday = todayPlan == null
         ? 0.0
         : todayPlan!.morning.calories + todayPlan!.lunch.calories + todayPlan!.afternoon.calories + todayPlan!.night.calories;
+    final proteinTarget = (profile.weightKg * 1.5).round();
+    final carbTarget = (profile.dailyCalorieTarget * 0.5 / 4).round();
+    final fatTarget = (profile.dailyCalorieTarget * 0.25 / 9).round();
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            Theme.of(context).brightness == Brightness.dark ? const Color(0xFF143122) : const Color(0xFF1B5E3B),
-            Theme.of(context).brightness == Brightness.dark ? const Color(0xFF204B35) : const Color(0xFF2D6A4F),
-            AppColors.primaryLight,
-          ],
+        gradient: const LinearGradient(
+          colors: [Color(0xFF184C30), Color(0xFF256A42), Color(0xFF3E8B5D)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(27, 94, 59, 0.24),
+            color: Color.fromRGBO(27, 94, 59, 0.22),
             blurRadius: 26,
             spreadRadius: -8,
             offset: Offset(0, 16),
@@ -139,54 +133,21 @@ class _PlanHeroCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'AI meal plan',
-                  style: AppTextStyles.screenTitle.copyWith(color: AppColors.white),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'এই সপ্তাহের বাস্তব ডেটা',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.white,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
+          Text('আপনার জন্য এই সপ্তাহের খাবার পরিকল্পনা', style: AppTextStyles.screenTitle.copyWith(color: AppColors.white)),
           const SizedBox(height: 10),
           Text(
-            todayPlan == null
-                ? 'এই সপ্তাহের পরিকল্পনা তৈরি হয়েছে, কিন্তু আজকের slot এখনো পাওয়া যায়নি।'
-                : 'আজকের জন্য মোট প্রায় ${BengaliFormatters.toBengaliNumber(totalToday.round())} kcal-এর balanced দেশীয় meal plan প্রস্তুত আছে।',
-            style: AppTextStyles.body.copyWith(color: Colors.white.withValues(alpha: 0.92)),
+            'এই সপ্তাহে আপনার শরীর, লক্ষ্য আর সমস্যার ভিত্তিতে ডিম, দুধ, কলা, মাছ, মাংস, ছোলা, কাঠবাদাম, ভাত আর সবজির balance রাখা হয়েছে।',
+            style: AppTextStyles.body.copyWith(color: Colors.white.withValues(alpha: 0.90)),
           ),
           const SizedBox(height: 16),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              _HeroMiniStat(
-                label: 'সপ্তাহ',
-                value: plan.weekOf.isEmpty ? '—' : plan.weekOf.substring(5),
-              ),
-              const SizedBox(width: 10),
-              _HeroMiniStat(
-                label: 'আজ',
-                value: todayPlan == null ? '—' : '${BengaliFormatters.toBengaliNumber(totalToday.round())} kcal',
-              ),
-              const SizedBox(width: 10),
-              _HeroMiniStat(
-                label: 'টিপস',
-                value: BengaliFormatters.toBengaliNumber(plan.weeklyTips.length),
-              ),
+              _HeroPill(label: 'আজ', value: '${BengaliFormatters.toBengaliNumber(totalToday.round())} kcal'),
+              _HeroPill(label: 'প্রোটিন', value: '${BengaliFormatters.toBengaliNumber(proteinTarget)}g'),
+              _HeroPill(label: 'কার্ব', value: '${BengaliFormatters.toBengaliNumber(carbTarget)}g'),
+              _HeroPill(label: 'ফ্যাট', value: '${BengaliFormatters.toBengaliNumber(fatTarget)}g'),
             ],
           ),
         ],
@@ -195,8 +156,8 @@ class _PlanHeroCard extends StatelessWidget {
   }
 }
 
-class _HeroMiniStat extends StatelessWidget {
-  const _HeroMiniStat({
+class _HeroPill extends StatelessWidget {
+  const _HeroPill({
     required this.label,
     required this.value,
   });
@@ -206,29 +167,80 @@ class _HeroMiniStat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.14),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: RichText(
+        text: TextSpan(
+          style: AppTextStyles.caption.copyWith(color: Colors.white70),
           children: [
-            Text(label, style: AppTextStyles.caption.copyWith(color: Colors.white70)),
-            const SizedBox(height: 6),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.metricSmall.copyWith(
+            TextSpan(text: '$label: '),
+            TextSpan(
+              text: value,
+              style: AppTextStyles.caption.copyWith(
                 color: AppColors.white,
-                fontSize: 18,
+                fontWeight: FontWeight.w800,
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MacroGoalCard extends StatelessWidget {
+  const _MacroGoalCard({required this.profile});
+
+  final UserProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final proteinTarget = (profile.weightKg * 1.5).round();
+    final carbTarget = (profile.dailyCalorieTarget * 0.5 / 4).round();
+    final fatTarget = (profile.dailyCalorieTarget * 0.25 / 9).round();
+
+    return InfoCard(
+      child: Row(
+        children: [
+          Expanded(child: _MacroGoalMini(label: 'প্রোটিন', value: '${BengaliFormatters.toBengaliNumber(proteinTarget)}g')),
+          const SizedBox(width: 10),
+          Expanded(child: _MacroGoalMini(label: 'কার্ব', value: '${BengaliFormatters.toBengaliNumber(carbTarget)}g')),
+          const SizedBox(width: 10),
+          Expanded(child: _MacroGoalMini(label: 'ফ্যাট', value: '${BengaliFormatters.toBengaliNumber(fatTarget)}g')),
+        ],
+      ),
+    );
+  }
+}
+
+class _MacroGoalMini extends StatelessWidget {
+  const _MacroGoalMini({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryFaint,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label, style: AppTextStyles.caption),
+          const SizedBox(height: 6),
+          Text(value, style: AppTextStyles.metricSmall.copyWith(fontSize: 20)),
+        ],
       ),
     );
   }
@@ -252,7 +264,7 @@ class _TodayPlanSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('আজকের পরিকল্পনা', style: AppTextStyles.cardTitle),
+          Text('আজ কী কী খাওয়া উচিত', style: AppTextStyles.cardTitle),
           const SizedBox(height: 12),
           ...slots.asMap().entries.map((entry) {
             final item = entry.value;
@@ -280,11 +292,10 @@ class _MealPlanRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasItems = slot.items.isNotEmpty;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark ? const Color(0xFF122119) : AppColors.primaryFaint,
+        color: AppColors.primaryFaint,
         borderRadius: BorderRadius.circular(18),
       ),
       child: Column(
@@ -296,7 +307,7 @@ class _MealPlanRow extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.06 : 0.92),
+                  color: AppColors.white.withValues(alpha: 0.90),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 alignment: Alignment.center,
@@ -305,7 +316,7 @@ class _MealPlanRow extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(child: Text(title, style: AppTextStyles.bodyLarge)),
               Text(
-                hasItems ? '${BengaliFormatters.toBengaliNumber(slot.calories.round())} kcal' : '—',
+                '${BengaliFormatters.toBengaliNumber(slot.calories.round())} kcal',
                 style: AppTextStyles.caption.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
@@ -314,32 +325,29 @@ class _MealPlanRow extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 12),
-          if (!hasItems)
-            Text('এখনো কোনো item নেই', style: AppTextStyles.body.copyWith(color: AppColors.textMuted))
-          else
-            SizedBox(
-              height: 34,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                itemCount: slot.items.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 6),
-                itemBuilder: (context, index) => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: Theme.of(context).brightness == Brightness.dark ? 0.06 : 0.95),
-                    borderRadius: BorderRadius.circular(999),
-                    border: Border.all(color: AppColors.border),
-                  ),
-                  child: Text(
-                    slot.items[index],
-                    style: AppTextStyles.caption.copyWith(
-                      color: AppColors.primaryMid,
-                      fontWeight: FontWeight.w700,
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: slot.items
+                .map(
+                  (item) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: AppColors.white,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Text(
+                      item,
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.primaryMid,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
-                ),
-              ),
-            ),
+                )
+                .toList(),
+          ),
         ],
       ),
     );
@@ -371,16 +379,12 @@ class _WeeklyCalendar extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('সাপ্তাহিক ক্যালেন্ডার', style: AppTextStyles.cardTitle),
+          Text('এই সপ্তাহের দিনভিত্তিক গাইড', style: AppTextStyles.cardTitle),
           const SizedBox(height: 14),
           Row(
             children: labels.map((entry) {
               final dayPlan = plan.days[entry.$1];
-              final hasData = dayPlan != null &&
-                  (dayPlan.morning.items.isNotEmpty ||
-                      dayPlan.lunch.items.isNotEmpty ||
-                      dayPlan.afternoon.items.isNotEmpty ||
-                      dayPlan.night.items.isNotEmpty);
+              final hasData = dayPlan != null;
               final isToday = entry.$1 == todayKey;
               return Expanded(
                 child: Column(
@@ -428,7 +432,7 @@ class _TipsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('এই সপ্তাহের টিপস', style: AppTextStyles.cardTitle),
+          Text('ডাক্তারের ছোট গাইড', style: AppTextStyles.cardTitle),
           const SizedBox(height: 12),
           ...tips.map(
             (tip) => Padding(
@@ -457,32 +461,77 @@ class _TipsCard extends StatelessWidget {
   }
 }
 
-class _ExerciseCard extends ConsumerWidget {
-  const _ExerciseCard({required this.exercises});
+class _ExerciseRoadmapCard extends ConsumerWidget {
+  const _ExerciseRoadmapCard({
+    required this.exercises,
+    required this.onToggle,
+  });
 
   final List<WeeklyExerciseItem> exercises;
+  final Future<void> Function(WeeklyExerciseItem item, bool completed) onToggle;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final completed = exercises.where((item) => item.completed).length;
+    final points = completed * 10;
+    final nextBadgeAt = points >= 100 ? (((points ~/ 100) + 1) * 100) : 100;
+    final progress = exercises.isEmpty ? 0.0 : completed / exercises.length;
+
     return InfoCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('আজকের ব্যায়াম', style: AppTextStyles.cardTitle),
+          Text('আজকের ব্যায়াম রোডম্যাপ', style: AppTextStyles.cardTitle),
+          const SizedBox(height: 8),
+          Text(
+            'আজকের কাজগুলোর প্রতিটা সম্পন্ন করলে ${BengaliFormatters.toBengaliNumber(10)} পয়েন্ট করে পাবেন।',
+            style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
+          ),
           const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: AppColors.primaryFaint,
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'আপনি সুস্থ হতে ${BengaliFormatters.toBengaliNumber(points)} পয়েন্ট এগিয়েছেন',
+                  style: AppTextStyles.bodyLarge.copyWith(color: AppColors.primary),
+                ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: progress.clamp(0.0, 1.0),
+                  minHeight: 8,
+                  borderRadius: BorderRadius.circular(999),
+                  backgroundColor: AppColors.border,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  points >= 100
+                      ? 'আপনি ${BengaliFormatters.toBengaliNumber(points ~/ 100)}টি badge অর্জন করেছেন।'
+                      : 'পরের badge পেতে আরও ${BengaliFormatters.toBengaliNumber(nextBadgeAt - points)} পয়েন্ট বাকি।',
+                  style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
           ...exercises.map(
             (item) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: item.completed
-                      ? AppColors.primaryFaint
-                      : (Theme.of(context).brightness == Brightness.dark ? const Color(0xFF13231B) : AppColors.white),
+                  color: item.completed ? AppColors.primaryFaint : AppColors.white,
                   borderRadius: BorderRadius.circular(18),
                   border: Border.all(color: item.completed ? AppColors.primaryLight : AppColors.border),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       child: Column(
@@ -499,11 +548,14 @@ class _ExerciseCard extends ConsumerWidget {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 12),
                     Checkbox(
                       value: item.completed,
-                      onChanged: (value) async {
-                        await ref.read(plannerRepositoryProvider).toggleExercise(item.id, value ?? false);
-                      },
+                      onChanged: item.id.isEmpty
+                          ? null
+                          : (value) async {
+                              await onToggle(item, value ?? false);
+                            },
                     ),
                   ],
                 ),
@@ -516,90 +568,163 @@ class _ExerciseCard extends ConsumerWidget {
   }
 }
 
-class _LoadingCard extends StatelessWidget {
-  const _LoadingCard({required this.title});
-
-  final String title;
-
-  @override
-  Widget build(BuildContext context) {
-    return InfoCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTextStyles.cardTitle),
-          const SizedBox(height: 12),
-          const LinearProgressIndicator(),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyDataCard extends StatelessWidget {
-  const _EmptyDataCard({
-    required this.title,
-    required this.message,
+class _WeeklyProgressHeader extends StatelessWidget {
+  const _WeeklyProgressHeader({
+    required this.completedItems,
+    required this.totalItems,
+    required this.points,
+    required this.badgeCount,
   });
 
-  final String title;
-  final String message;
+  final int completedItems;
+  final int totalItems;
+  final int points;
+  final int badgeCount;
 
   @override
   Widget build(BuildContext context) {
-    return InfoCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: AppTextStyles.cardTitle),
-          const SizedBox(height: 8),
-          Text(message, style: AppTextStyles.body.copyWith(color: AppColors.textSecondary)),
-        ],
-      ),
-    );
-  }
-}
+    final progress = totalItems == 0 ? 0.0 : completedItems / totalItems;
 
-class _WeeklyProgressHeader extends StatelessWidget {
-  const _WeeklyProgressHeader({required this.completedDays});
-
-  final int completedDays;
-
-  @override
-  Widget build(BuildContext context) {
     return InfoCard(
       backgroundColor: AppColors.primaryFaint,
       borderColor: AppColors.primaryLight,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('এই সপ্তাহের অগ্রগতি', style: AppTextStyles.cardTitle),
-          const SizedBox(height: 14),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(7, (index) {
-              final active = index < completedDays;
-              final isToday = index == DateTime.now().weekday - 1;
-              return AnimatedContainer(
-                duration: const Duration(milliseconds: 300),
-                width: isToday ? 18 : 14,
-                height: isToday ? 18 : 14,
+            children: [
+              Expanded(
+                child: Text('এই সপ্তাহের অগ্রগতি', style: AppTextStyles.cardTitle),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: active ? AppColors.primary : AppColors.border,
-                  shape: BoxShape.circle,
+                  color: AppColors.white,
+                  borderRadius: BorderRadius.circular(999),
                 ),
-              );
-            }),
+                child: Text(
+                  '${BengaliFormatters.toBengaliNumber(points)} পয়েন্ট',
+                  style: AppTextStyles.caption.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 14),
+          LinearProgressIndicator(
+            value: progress.clamp(0.0, 1.0),
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(999),
+            backgroundColor: AppColors.border,
+            color: AppColors.primary,
+          ),
+          const SizedBox(height: 10),
           Text(
-            '${BengaliFormatters.toBengaliNumber(completedDays)}/৭ দিন লক্ষ্য পূরণ হয়েছে',
+            badgeCount > 0
+                ? 'আপনি ${BengaliFormatters.toBengaliNumber(badgeCount)}টি badge পেয়েছেন।'
+                : 'প্রতিটি check mark আপনাকে ধীরে ধীরে লক্ষ্য পূরণের দিকে এগিয়ে নিচ্ছে।',
             style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
     );
   }
+}
+
+WeeklyMealPlan _buildPreviewPlan(UserProfile profile) {
+  final dailyTarget = profile.dailyCalorieTarget.toDouble();
+  final breakfastCalories = dailyTarget * 0.22;
+  final lunchCalories = dailyTarget * 0.36;
+  final snackCalories = dailyTarget * 0.14;
+  final dinnerCalories = dailyTarget * 0.28;
+
+  WeeklyMealPlanDay day(List<String> breakfast, List<String> lunch, List<String> snack, List<String> dinner) {
+    return WeeklyMealPlanDay(
+      morning: PlannedMealSlot(items: breakfast, calories: breakfastCalories),
+      lunch: PlannedMealSlot(items: lunch, calories: lunchCalories),
+      afternoon: PlannedMealSlot(items: snack, calories: snackCalories),
+      night: PlannedMealSlot(items: dinner, calories: dinnerCalories),
+    );
+  }
+
+  final proteinHint = (profile.weightKg * 1.5).round();
+  final carbHint = (profile.dailyCalorieTarget * 0.5 / 4).round();
+  final fatHint = (profile.dailyCalorieTarget * 0.25 / 9).round();
+
+  return WeeklyMealPlan(
+    weekOf: '',
+    days: {
+      'monday': day(['২টি ডিম', 'দুধ', 'কলা'], ['২ প্লেট ভাত', 'মাছ', 'ডাল', 'শাক'], ['ছোলা', 'কাঠবাদাম'], ['১ প্লেট ভাত', 'মুরগি', 'সবজি']),
+      'tuesday': day(['চিড়া', 'দই', 'ডিম'], ['ভাত', 'মুরগি', 'সবজি', 'ডাল'], ['আপেল', 'বাদাম'], ['রুটি', 'মাছ', 'শাক']),
+      'wednesday': day(['ডিম', 'ওটস', 'কলা'], ['ভাত', 'ডাল', 'মাছ', 'সালাদ'], ['দই', 'ছোলা'], ['রুটি', 'ডিম', 'সবজি']),
+      'thursday': day(['দুধ', 'ছোলার ঘুগনি', 'ডিম'], ['ভাত', 'মুরগি', 'শাক', 'ডাল'], ['মুড়ি', 'বাদাম'], ['রুটি', 'ডাল', 'লাউ']),
+      'friday': day(['২টি ডিম', 'চিড়া', 'দই'], ['ভাত', 'মাছ', 'সবজি', 'ডাল'], ['চিনাবাদাম', 'ফল'], ['রুটি', 'মুরগি', 'সবজি']),
+      'saturday': day(['ডিম', 'দুধ', 'কলা'], ['ভাত', 'গরুর মাংস', 'সালাদ', 'ডাল'], ['দই', 'কাঠবাদাম'], ['রুটি', 'মাছ', 'শাক']),
+      'sunday': day(['চিড়া', 'ডিম', 'কলা'], ['ভাত', 'মাছ', 'সবজি', 'ডাল'], ['ছোলা', 'আপেল'], ['রুটি', 'ডিম', 'সবজি']),
+    },
+    weeklyTips: [
+      'এই সপ্তাহে প্রায় ${BengaliFormatters.toBengaliNumber(proteinHint)}g প্রোটিন, ${BengaliFormatters.toBengaliNumber(carbHint)}g কার্ব আর ${BengaliFormatters.toBengaliNumber(fatHint)}g ফ্যাটের দিকে লক্ষ্য রাখুন।',
+      'ডিম, দুধ, মাছ, মাংস, ছোলা, কাঠবাদাম আর ভাত balance করে রাখা হয়েছে।',
+    ],
+    specialNotes: 'আপনার প্রোফাইল অনুযায়ী এমনভাবে খাবার সাজানো হয়েছে যেন শক্তি, recovery আর স্বাভাবিক সুস্থ জীবনযাপন steady থাকে।',
+  );
+}
+
+List<WeeklyExerciseItem> _buildPreviewExercises(UserProfile profile) {
+  return [
+    WeeklyExerciseItem(
+      id: '',
+      exerciseTitle: 'সকাল • ৫ মিনিট breathing',
+      durationMinutes: 5,
+      caloriesBurned: 20,
+      note: '',
+      conditionBenefit: 'দিনটা steady শুরু করতে আর মানসিক চাপ কমাতে সাহায্য করবে।',
+      completed: false,
+      dateKey: '',
+      loggedAt: DateTime.now(),
+    ),
+    WeeklyExerciseItem(
+      id: '',
+      exerciseTitle: 'দুপুর • ১০ মিনিট brisk walk',
+      durationMinutes: 10,
+      caloriesBurned: 45,
+      note: '',
+      conditionBenefit: profile.conditions.contains(HealthCondition.diabetes)
+          ? 'রক্তে শর্করা control-এ রাখতে সাহায্য করবে।'
+          : 'দৈনিক activity আর metabolism বাড়াবে।',
+      completed: false,
+      dateKey: '',
+      loggedAt: DateTime.now(),
+    ),
+    WeeklyExerciseItem(
+      id: '',
+      exerciseTitle: profile.conditions.contains(HealthCondition.ed) || profile.conditions.contains(HealthCondition.prematureEjaculation)
+          ? 'বিকাল • ১০ মিনিট kegel exercise'
+          : 'বিকাল • ১০ মিনিট squat',
+      durationMinutes: 10,
+      caloriesBurned: 40,
+      note: '',
+      conditionBenefit: profile.conditions.contains(HealthCondition.ed) || profile.conditions.contains(HealthCondition.prematureEjaculation)
+          ? 'Pelvic floor শক্তিশালী করতে সাহায্য করবে।'
+          : 'শরীরের lower body activation আর stamina বাড়াবে।',
+      completed: false,
+      dateKey: '',
+      loggedAt: DateTime.now(),
+    ),
+    WeeklyExerciseItem(
+      id: '',
+      exerciseTitle: 'রাত • ১০ মিনিট meditation',
+      durationMinutes: 10,
+      caloriesBurned: 20,
+      note: '',
+      conditionBenefit: 'Recovery আর ঘুমের quality ভালো করতে সাহায্য করবে।',
+      completed: false,
+      dateKey: '',
+      loggedAt: DateTime.now(),
+    ),
+  ];
 }
 
 String _todayWeekKey() {
@@ -620,15 +745,4 @@ String _todayWeekKey() {
       return 'sunday';
   }
   return 'monday';
-}
-
-String _friendlyError(Object error) {
-  final text = error.toString().toLowerCase();
-  if (text.contains('permission-denied')) {
-    return 'ডেটা পড়ার অনুমতি পাওয়া যায়নি। Firebase rules sync হওয়ার পর আবার চেষ্টা করুন।';
-  }
-  if (text.contains('socketexception') || text.contains('failed host lookup')) {
-    return 'ইন্টারনেট সংযোগ পাওয়া যাচ্ছে না।';
-  }
-  return 'এই মুহূর্তে প্ল্যান আনা যাচ্ছে না। একটু পরে আবার চেষ্টা করুন।';
 }

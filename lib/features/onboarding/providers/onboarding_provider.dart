@@ -1,5 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'dart:async';
+
+import '../../../data/models/app_settings.dart';
+import '../../../data/models/daily_summary.dart';
 import '../../../data/models/user_profile.dart';
 import '../../../shared/models/chat_message.dart';
 import '../../../shared/providers/app_state_provider.dart';
@@ -257,6 +261,25 @@ class OnboardingNotifier extends Notifier<OnboardingState> {
     );
 
     await ref.read(userProfileProvider.notifier).save(profile);
+    final settings = ref.read(appSettingsProvider).asData?.value;
+    if (settings?.notificationsEnabled ?? true) {
+      unawaited(
+        ref.read(notificationServiceProvider).scheduleContextualReminders(
+              profile: profile,
+              settings: settings ?? const AppSettings(),
+              summary: const DailySummary(dateKey: '', meals: [], waterGlasses: 0),
+            ),
+      );
+    }
+    unawaited(
+      ref.read(doctorNoteRepositoryProvider).getOrGenerate(
+            profile: profile,
+            summary: const DailySummary(dateKey: '', meals: [], waterGlasses: 0),
+            exercises: const [],
+          ),
+    );
+    unawaited(ref.read(plannerRepositoryProvider).ensureTodayExercises(profile));
+    unawaited(ref.read(plannerRepositoryProvider).ensureCurrentWeekMealPlan(profile));
 
     state = state.copyWith(
       isSaving: false,

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../../data/models/food_analysis_result.dart';
+import '../../../data/models/daily_summary.dart';
 import '../../../data/models/offline_queue_item.dart';
 import '../../../data/services/ai_backend_service.dart';
 import '../../home/providers/home_provider.dart';
@@ -21,6 +22,7 @@ class ScannerState {
     this.errorMessage,
     this.description = '',
     this.mode = ScanInputMode.meal,
+    this.mealSlot = MealSlot.morning,
   });
 
   final XFile? image;
@@ -29,6 +31,7 @@ class ScannerState {
   final String? errorMessage;
   final String description;
   final ScanInputMode mode;
+  final MealSlot mealSlot;
 
   ScannerState copyWith({
     XFile? image,
@@ -37,6 +40,7 @@ class ScannerState {
     String? errorMessage,
     String? description,
     ScanInputMode? mode,
+    MealSlot? mealSlot,
     bool clearResult = false,
     bool clearError = false,
   }) {
@@ -47,6 +51,7 @@ class ScannerState {
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       description: description ?? this.description,
       mode: mode ?? this.mode,
+      mealSlot: mealSlot ?? this.mealSlot,
     );
   }
 }
@@ -55,7 +60,9 @@ class ScannerNotifier extends Notifier<ScannerState> {
   final ImagePicker _picker = ImagePicker();
 
   @override
-  ScannerState build() => const ScannerState();
+  ScannerState build() => ScannerState(
+        mealSlot: MealSlotX.fromHour(DateTime.now().hour),
+      );
 
   void updateDescription(String value) {
     state = state.copyWith(description: value, clearError: true);
@@ -63,6 +70,10 @@ class ScannerNotifier extends Notifier<ScannerState> {
 
   void setMode(ScanInputMode mode) {
     state = state.copyWith(mode: mode, clearError: true, clearResult: true);
+  }
+
+  void setMealSlot(MealSlot slot) {
+    state = state.copyWith(mealSlot: slot, clearError: true);
   }
 
   Future<void> pickAndAnalyze(WidgetRef ref) async {
@@ -202,7 +213,9 @@ class ScannerNotifier extends Notifier<ScannerState> {
   }
 
   void clear() {
-    state = const ScannerState();
+    state = ScannerState(
+      mealSlot: MealSlotX.fromHour(DateTime.now().hour),
+    );
   }
 }
 

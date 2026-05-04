@@ -30,32 +30,12 @@ class MacroRingChart extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('আজকের ক্যালরি ব্যালেন্স', style: AppTextStyles.cardTitle),
-                    const SizedBox(height: 4),
-                    Text('Goal • Food • Remaining', style: AppTextStyles.caption),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryFaint,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  'Premium',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
+              Text('আজকের ক্যালরি ব্যালেন্স', style: AppTextStyles.cardTitle),
+              const SizedBox(height: 4),
+              Text('Goal • Food • Remaining', style: AppTextStyles.caption),
             ],
           ),
           const SizedBox(height: 18),
@@ -84,7 +64,7 @@ class MacroRingChart extends StatelessWidget {
                                   style: AppTextStyles.metric.copyWith(fontSize: 40),
                                 ),
                               ),
-                              Text('খাওয়া হয়েছে', style: AppTextStyles.caption),
+                              Text('খাওয়া হয়েছে', style: AppTextStyles.caption),
                             ],
                           ),
                         ),

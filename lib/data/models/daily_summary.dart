@@ -78,13 +78,14 @@ class MealLogEntry {
     FoodAnalysisResult result, {
     String? imagePath,
     DateTime? loggedAt,
+    MealSlot? slot,
   }) {
     final time = loggedAt ?? DateTime.now();
     return MealLogEntry(
       id: time.microsecondsSinceEpoch.toString(),
       foodName: result.foodName,
       loggedAt: time,
-      slot: MealSlotX.fromHour(time.hour),
+      slot: slot ?? MealSlotX.fromHour(time.hour),
       macros: result.macros,
       summary: result.summary,
       healthScore: result.healthScore,

@@ -98,6 +98,7 @@ class DailySummaryRepository {
   Future<void> addMeal(
     FoodAnalysisResult result, {
     String? imagePath,
+    MealSlot? slot,
   }) async {
     final ref = _foodLogsRef;
     if (ref == null) {
@@ -109,6 +110,7 @@ class DailySummaryRepository {
       result,
       imagePath: imagePath,
       loggedAt: loggedAt,
+      slot: slot,
     );
 
     await ref.add(
