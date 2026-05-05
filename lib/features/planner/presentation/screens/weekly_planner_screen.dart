@@ -65,15 +65,6 @@ class WeeklyPlannerScreen extends ConsumerWidget {
             ],
           ),
         ),
-      _ExerciseRoadmapCard(
-        exercises: renderExercises,
-        onToggle: (item, completed) async {
-          if (item.id.isEmpty) {
-            return;
-          }
-          await ref.read(plannerRepositoryProvider).toggleExercise(item.id, completed);
-        },
-      ),
     ];
 
     return ListView.builder(

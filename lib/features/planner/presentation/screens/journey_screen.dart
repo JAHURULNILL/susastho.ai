@@ -31,8 +31,9 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
+    return SafeArea(
+      child: Column(
+        children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.screenPadding,
@@ -66,7 +67,8 @@ class _JourneyScreenState extends ConsumerState<JourneyScreen> {
               : const JourneyWellnessSection(),
         ),
       ],
-    );
+    ),
+   );
   }
 }
 
@@ -141,12 +143,7 @@ class _JourneyWeeklyTab extends ConsumerWidget {
           children: [
             Text('এই সপ্তাহের জার্নি', style: AppTextStyles.screenTitle),
             const SizedBox(height: 8),
-            Text(
-              profile == null
-                  ? 'জার্নির তথ্য এখানে দেখা যাবে।'
-                  : 'আপনার খাওয়া, পানি, ব্যায়াম, ঘুম আর ওজনের বাস্তব অগ্রগতি এখানে একসাথে দেখানো হচ্ছে।',
-              style: AppTextStyles.body,
-            ),
+            const SizedBox.shrink(),
           ],
         ),
       ),

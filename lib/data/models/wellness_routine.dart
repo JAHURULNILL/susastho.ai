@@ -23,27 +23,27 @@ extension WellnessRoutineTypeX on WellnessRoutineType {
         WellnessRoutineType.breathing => 'শ্বাস-প্রশ্বাস',
         WellnessRoutineType.kegel => 'কেগেল ব্যায়াম',
         WellnessRoutineType.meditation => 'মেডিটেশন',
-        WellnessRoutineType.nofap => 'No Fap',
+        WellnessRoutineType.nofap => 'আত্মশুদ্ধি',
         WellnessRoutineType.sleep => 'ঘুমের রুটিন',
-        WellnessRoutineType.coldshower => 'ঠান্ডা গোসল',
+        WellnessRoutineType.coldshower => 'ডিজিটাল ডিটক্স',
       };
 
   String get subtitleBn => switch (this) {
         WellnessRoutineType.breathing => 'সকালের শ্বাসে ফোকাস আনুন',
         WellnessRoutineType.kegel => 'Pelvic floor শক্তিশালী রাখুন',
         WellnessRoutineType.meditation => 'মনের চাপ নামিয়ে আনুন',
-        WellnessRoutineType.nofap => 'Self-control ধারাবাহিক রাখুন',
+        WellnessRoutineType.nofap => 'সংযম অনুশীলন চালিয়ে যান',
         WellnessRoutineType.sleep => 'রাতের recovery ঠিক রাখুন',
-        WellnessRoutineType.coldshower => 'শরীরকে fresh reset দিন',
+        WellnessRoutineType.coldshower => 'স্ক্রিন থেকে দূরে থাকুন',
       };
 
   String get iconEmoji => switch (this) {
         WellnessRoutineType.breathing => '🌬️',
         WellnessRoutineType.kegel => '💪',
         WellnessRoutineType.meditation => '🧘',
-        WellnessRoutineType.nofap => '🔒',
+        WellnessRoutineType.nofap => '🛡️',
         WellnessRoutineType.sleep => '🌙',
-        WellnessRoutineType.coldshower => '🚿',
+        WellnessRoutineType.coldshower => '📵',
       };
 
   static WellnessRoutineType fromKey(String key) => switch (key) {
@@ -276,9 +276,9 @@ class WellnessRoutinePlan {
         WellnessRoutineType.breathing => 'Breathing session',
         WellnessRoutineType.kegel => 'Kegel session',
         WellnessRoutineType.meditation => 'Meditation session',
-        WellnessRoutineType.nofap => 'No Fap check-in',
+        WellnessRoutineType.nofap => 'আত্মশুদ্ধি চেক-ইন',
         WellnessRoutineType.sleep => 'Sleep routine',
-        WellnessRoutineType.coldshower => 'Cold shower',
+        WellnessRoutineType.coldshower => 'Digital detox',
       };
       return WellnessRoutineEntry(
         type: type,

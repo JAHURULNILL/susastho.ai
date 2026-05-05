@@ -27,11 +27,38 @@ final navigationTabProvider = NotifierProvider<NavigationTabNotifier, int>(
   NavigationTabNotifier.new,
 );
 
-class HomeShell extends ConsumerWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeShell> createState() => _HomeShellState();
+}
+
+class _HomeShellState extends ConsumerState<HomeShell> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final settings = ref.read(appSettingsProvider).asData?.value;
+      if (settings?.wearableSyncEnabled ?? true) {
+        ref.read(healthSyncServiceProvider).syncToday();
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final currentIndex = ref.watch(navigationTabProvider);
     final profile = ref.watch(userProfileProvider).asData?.value;
     final settings = ref.watch(appSettingsProvider).asData?.value;

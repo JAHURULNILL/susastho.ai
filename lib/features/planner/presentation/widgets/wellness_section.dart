@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -112,6 +113,7 @@ class JourneyWellnessSection extends ConsumerWidget {
                 details: const {},
               ),
               onReset: () => _resetNofap(sheetContext, ref),
+              onUpdateStreak: (val) => _updateNofapStreak(sheetContext, ref, val),
             );
           case WellnessRoutineType.sleep:
             return _SimpleCompletionSheet(
@@ -133,14 +135,22 @@ class JourneyWellnessSection extends ConsumerWidget {
               ),
             );
           case WellnessRoutineType.coldshower:
-            return _ColdShowerSheet(
+            return _SimpleCompletionSheet(
               meta: meta,
-              onComplete: (duration) => _completeModule(
+              title: 'ডিজিটাল ডিটক্স চ্যালেঞ্জ',
+              summary: 'পরবর্তী ৩ ঘণ্টা সব ধরনের স্ক্রিন থেকে দূরে থাকুন এবং অফলাইন কাজে সময় দিন।',
+              bullets: const [
+                'ফোন অন্য ঘরে রাখুন',
+                'বই পড়ুন বা পরিবারের সাথে সময় কাটান',
+                'প্রকৃতির সাথে বা নিজের সাথে সময় কাটান',
+              ],
+              actionLabel: 'ডিটক্স শুরু করলাম',
+              onComplete: () => _completeModule(
                 context: sheetContext,
                 ref: ref,
                 type: type,
-                duration: duration,
-                details: const {'type': 'cold_shower'},
+                duration: 10800,
+                details: const {'type': 'digital_detox'},
               ),
             );
         }
@@ -178,6 +188,19 @@ class JourneyWellnessSection extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Reset রাখা যায়নি: $error')),
+        );
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _updateNofapStreak(BuildContext context, WidgetRef ref, int newStreak) async {
+    try {
+      await ref.read(wellnessRoutineProvider.notifier).updateNofapStreak(newStreak);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Streak update করা যায়নি: $error')),
         );
       }
       rethrow;
@@ -1045,6 +1068,7 @@ class _MeditationSessionSheet extends StatefulWidget {
 
 class _MeditationSessionSheetState extends State<_MeditationSessionSheet> {
   Timer? _timer;
+  AudioPlayer? _audioPlayer;
   final List<int> _minutes = const [5, 10, 15];
   int _selectedMinutes = 10;
   int _remaining = 0;
@@ -1055,6 +1079,7 @@ class _MeditationSessionSheetState extends State<_MeditationSessionSheet> {
   @override
   void dispose() {
     _timer?.cancel();
+    _audioPlayer?.dispose();
     super.dispose();
   }
 
@@ -1080,6 +1105,12 @@ class _MeditationSessionSheetState extends State<_MeditationSessionSheet> {
               }).toList(),
             ),
           const SizedBox(height: 18),
+          if (!_running) ...[
+            Text('মেডিটেশনের নিয়ম:', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800)),
+            const SizedBox(height: 8),
+            Text('• শান্ত পরিবেশে মেরুদণ্ড সোজা করে বসুন।\n• চোখ বন্ধ করে স্বাভাবিক শ্বাসের দিকে মনোযোগ দিন।\n• যখনই অন্য চিন্তা আসবে, আবার শ্বাসে ফিরে আসুন।\n• শুরু করলে রিলাক্সিং সাউন্ড প্লে হবে।', style: AppTextStyles.body),
+            const SizedBox(height: 18),
+          ],
           AnimatedContainer(
             duration: const Duration(milliseconds: 900),
             width: double.infinity,
@@ -1126,6 +1157,12 @@ class _MeditationSessionSheetState extends State<_MeditationSessionSheet> {
       _remaining = totalSeconds;
       _elapsed = 0;
     });
+
+    _audioPlayer = AudioPlayer();
+    _audioPlayer!.setReleaseMode(ReleaseMode.loop);
+    // Playing a calming rain/waves sound
+    _audioPlayer!.play(UrlSource('https://actions.google.com/sounds/v1/water/waves_crashing_on_rock_beach.ogg'));
+
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
       if (_remaining > 1) {
@@ -1144,6 +1181,7 @@ class _MeditationSessionSheetState extends State<_MeditationSessionSheet> {
 
   void _stop() {
     _timer?.cancel();
+    _audioPlayer?.stop();
     setState(() {
       _running = false;
       _remaining = 0;
@@ -1153,6 +1191,7 @@ class _MeditationSessionSheetState extends State<_MeditationSessionSheet> {
 
   Future<void> _finish() async {
     _timer?.cancel();
+    _audioPlayer?.stop();
     setState(() {
       _running = false;
       _submitting = true;
@@ -1192,12 +1231,14 @@ class _NoFapSheet extends StatelessWidget {
     required this.plan,
     required this.onCheckIn,
     required this.onReset,
+    required this.onUpdateStreak,
   });
 
   final _WellnessModuleMeta meta;
   final WellnessRoutinePlan plan;
   final Future<void> Function() onCheckIn;
   final Future<void> Function() onReset;
+  final Future<void> Function(int) onUpdateStreak;
 
   @override
   Widget build(BuildContext context) {
@@ -1210,9 +1251,20 @@ class _NoFapSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '${BengaliFormatters.toBengaliNumber(streak)} দিনের streak',
-            style: AppTextStyles.metricSmall.copyWith(color: meta.color, fontSize: 28),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${BengaliFormatters.toBengaliNumber(streak)} দিনের streak',
+                  style: AppTextStyles.metricSmall.copyWith(color: meta.color, fontSize: 28),
+                ),
+              ),
+              IconButton(
+                onPressed: () => _showEditDialog(context, streak),
+                icon: Icon(Icons.edit_rounded, color: meta.color),
+                tooltip: 'দিন সেট করুন',
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           Text(
@@ -1322,6 +1374,46 @@ class _NoFapSheet extends StatelessWidget {
     }
     return benefits.isEmpty ? ['প্রতিদিনের clean check-in future streak-এর base তৈরি করে।'] : benefits;
   }
+
+  Future<void> _showEditDialog(BuildContext context, int currentStreak) async {
+    final controller = TextEditingController(text: currentStreak.toString());
+    final result = await showDialog<int>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Streak দিন সেট করুন'),
+        content: TextField(
+          controller: controller,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(
+            labelText: 'কত দিন হয়েছে?',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('বাতিল'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = int.tryParse(controller.text.trim());
+              if (val != null && val >= 0) {
+                Navigator.of(ctx).pop(val);
+              }
+            },
+            child: const Text('সেভ করুন'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && context.mounted) {
+      await onUpdateStreak(result);
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+    }
+  }
 }
 
 class _SimpleCompletionSheet extends StatelessWidget {
@@ -1384,125 +1476,7 @@ class _SimpleCompletionSheet extends StatelessWidget {
   }
 }
 
-class _ColdShowerSheet extends StatefulWidget {
-  const _ColdShowerSheet({
-    required this.meta,
-    required this.onComplete,
-  });
 
-  final _WellnessModuleMeta meta;
-  final Future<void> Function(int duration) onComplete;
-
-  @override
-  State<_ColdShowerSheet> createState() => _ColdShowerSheetState();
-}
-
-class _ColdShowerSheetState extends State<_ColdShowerSheet> {
-  Timer? _timer;
-  int _remaining = 180;
-  bool _running = false;
-  bool _submitting = false;
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return _BaseSessionSheet(
-      meta: widget.meta,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('৩ মিনিটের cold shower challenge', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Text('প্রথমে steady থাকুন, তারপর শ্বাসের rhythm বজায় রাখুন।', style: AppTextStyles.body),
-          const SizedBox(height: 18),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            decoration: BoxDecoration(
-              color: widget.meta.pale,
-              borderRadius: BorderRadius.circular(28),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              _formatRemaining(_remaining),
-              style: AppTextStyles.metric.copyWith(fontSize: 34),
-            ),
-          ),
-          const SizedBox(height: 20),
-          _SessionActions(
-            running: _running,
-            submitting: _submitting,
-            startLabel: 'Cold shower শুরু',
-            onStart: _start,
-            onStop: _stop,
-          ),
-          const SizedBox(height: 12),
-          TextButton(
-            onPressed: _submitting
-                ? null
-                : () async {
-                    final navigator = Navigator.of(context);
-                    setState(() => _submitting = true);
-                    await widget.onComplete(180 - _remaining);
-                    if (mounted) {
-                      navigator.pop();
-                    }
-                  },
-            child: const Text('Timer ছাড়া সম্পন্ন mark করুন'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _start() {
-    setState(() {
-      _running = true;
-      _submitting = false;
-      _remaining = 180;
-    });
-    _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (_) async {
-      if (_remaining > 1) {
-        setState(() => _remaining -= 1);
-        return;
-      }
-      await _finish();
-    });
-  }
-
-  void _stop() {
-    _timer?.cancel();
-    setState(() {
-      _running = false;
-      _remaining = 180;
-    });
-  }
-
-  Future<void> _finish() async {
-    _timer?.cancel();
-    setState(() {
-      _running = false;
-      _submitting = true;
-      _remaining = 0;
-    });
-    await widget.onComplete(180);
-    if (mounted) {
-      Navigator.of(context).pop();
-    }
-  }
-
-  String _formatRemaining(int seconds) {
-    final minutes = (seconds ~/ 60).toString().padLeft(2, '0');
-    final remainder = (seconds % 60).toString().padLeft(2, '0');
-    return '$minutes:$remainder';
-  }
-}
 
 class _SessionActions extends StatelessWidget {
   const _SessionActions({
@@ -1662,10 +1636,10 @@ _WellnessModuleMeta _metaFor(WellnessRoutineType type) {
     case WellnessRoutineType.nofap:
       return const _WellnessModuleMeta(
         type: WellnessRoutineType.nofap,
-        title: 'No Fap',
-        shortTitle: 'No Fap',
+        title: 'আত্মশুদ্ধি',
+        shortTitle: 'আত্মশুদ্ধি',
         subtitle: 'Discipline ধরে রাখুন',
-        icon: '🔒',
+        icon: '🛡️',
         duration: 'সারাদিন',
         color: Color(0xFF4338CA),
         pale: Color(0xFFE0E7FF),
@@ -1684,11 +1658,11 @@ _WellnessModuleMeta _metaFor(WellnessRoutineType type) {
     case WellnessRoutineType.coldshower:
       return const _WellnessModuleMeta(
         type: WellnessRoutineType.coldshower,
-        title: 'ঠান্ডা গোসল',
-        shortTitle: 'Shower',
-        subtitle: 'শরীরকে fresh reset দিন',
-        icon: '🚿',
-        duration: '৩ মিনিট',
+        title: 'ডিজিটাল ডিটক্স',
+        shortTitle: 'ডিটক্স',
+        subtitle: 'স্ক্রিন থেকে দূরে থাকুন',
+        icon: '📵',
+        duration: '৩ ঘণ্টা',
         color: Color(0xFF1D4ED8),
         pale: Color(0xFFBFDBFE),
       );

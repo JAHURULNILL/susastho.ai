@@ -44,19 +44,38 @@ class ActivityTrackingService {
 
   Future<void> _handleStepEvent(StepCount event) async {
     final todayKey = _dateKey(DateTime.now());
-    final baselineCacheKey = 'step_baseline_$todayKey';
-    final cached = await _storage.readJson(baselineCacheKey);
+    final stateKey = 'step_state_$todayKey';
+    final cached = await _storage.readJson(stateKey);
     final currentSteps = event.steps;
 
-    int baseline;
+    int baseline = 0;
+    int savedSteps = 0;
+
     if (cached == null) {
       baseline = currentSteps;
-      await _storage.saveJson(baselineCacheKey, {'baseline': baseline});
+      await _storage.saveJson(stateKey, {'baseline': baseline, 'savedSteps': 0});
     } else {
       baseline = (cached['baseline'] as num?)?.toInt() ?? currentSteps;
+      savedSteps = (cached['savedSteps'] as num?)?.toInt() ?? 0;
     }
 
-    final todaySteps = (currentSteps - baseline).clamp(0, 200000);
+    if (currentSteps < baseline) {
+      // Device was rebooted. Pedometers reset to 0.
+      // We add whatever we had calculated to savedSteps and reset baseline to 0.
+      final previousTotal = savedSteps;
+      baseline = currentSteps;
+      savedSteps = previousTotal;
+      await _storage.saveJson(stateKey, {'baseline': baseline, 'savedSteps': savedSteps});
+    }
+
+    // currentSteps since boot - baseline + steps from before boot today
+    final todaySteps = (currentSteps - baseline + savedSteps).clamp(0, 200000);
+    
+    // Periodically update the state to prevent losing data if app crashes
+    if (todaySteps % 10 == 0) {
+        await _storage.saveJson(stateKey, {'baseline': baseline, 'savedSteps': savedSteps});
+    }
+
     await _healthMetricsRepository.saveSteps(todaySteps);
   }
 

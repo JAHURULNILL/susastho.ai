@@ -150,14 +150,149 @@ class WellnessRoutineRepository {
     required int duration,
     Map<String, dynamic> details = const {},
   }) async {
-    await _backendService.completeModule(
-      moduleId: moduleId,
-      duration: duration,
-      details: details,
-    );
+    final uid = _uid;
+    final firestore = _firestore;
+    if (uid == null || firestore == null) return;
+
+    final batch = firestore.batch();
+
+    // 1. Log completion
+    final logRef = firestore.collection('wellness_logs').doc('${uid}_${todayKey}_${moduleId.key}');
+    batch.set(logRef, {
+      'userId': uid,
+      'moduleId': moduleId.key,
+      'date': todayKey,
+      'completedAt': DateTime.now().toIso8601String(),
+      'duration': duration,
+      'details': details,
+    });
+
+    // 2. Update streak
+    if (moduleId != WellnessRoutineType.nofap) {
+      final streakRef = firestore.collection('wellness_streaks').doc('${uid}_${moduleId.key}');
+      final doc = await streakRef.get();
+      if (!doc.exists) {
+        batch.set(streakRef, {
+          'userId': uid,
+          'moduleId': moduleId.key,
+          'currentStreak': 1,
+          'longestStreak': 1,
+          'lastCompletedDate': todayKey,
+          'totalSessions': 1,
+          'startedAt': DateTime.now().toIso8601String(),
+        });
+      } else {
+        final data = doc.data()!;
+        final lastStr = data['lastCompletedDate'] as String? ?? '';
+        var current = (data['currentStreak'] as num?)?.toInt() ?? 0;
+        var longest = (data['longestStreak'] as num?)?.toInt() ?? 0;
+        final total = (data['totalSessions'] as num?)?.toInt() ?? 0;
+
+        if (lastStr != todayKey) {
+          try {
+            final lastDate = DateTime.parse(lastStr);
+            final diff = DateTime.now().difference(lastDate).inDays;
+            if (diff <= 1) {
+              current += 1;
+            } else {
+              current = 1;
+            }
+          } catch (_) {
+            current += 1;
+          }
+          if (current > longest) longest = current;
+
+          batch.update(streakRef, {
+            'currentStreak': current,
+            'longestStreak': longest,
+            'lastCompletedDate': todayKey,
+            'totalSessions': total + 1,
+          });
+        }
+      }
+    } else {
+      // For No Fap check-in
+      final ref = _nofapRef;
+      if (ref != null) {
+        final doc = await ref.get();
+        if (!doc.exists) {
+          batch.set(ref, {
+            'userId': uid,
+            'currentStreak': 1,
+            'longestStreak': 1,
+            'startDate': todayKey,
+            'lastResetDate': todayKey,
+            'totalResets': 0,
+          });
+        } else {
+          final data = doc.data()!;
+          var current = (data['currentStreak'] as num?)?.toInt() ?? 0;
+          var longest = (data['longestStreak'] as num?)?.toInt() ?? 0;
+          current += 1;
+          if (current > longest) longest = current;
+          batch.update(ref, {
+            'currentStreak': current,
+            'longestStreak': longest,
+          });
+        }
+      }
+    }
+
+    await batch.commit();
   }
 
-  Future<void> resetNofap() => _backendService.resetNofap();
+  Future<void> resetNofap() async {
+    final uid = _uid;
+    final ref = _nofapRef;
+    if (uid == null || ref == null) return;
+
+    final doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({
+        'userId': uid,
+        'currentStreak': 0,
+        'longestStreak': 0,
+        'startDate': todayKey,
+        'lastResetDate': todayKey,
+        'totalResets': 1,
+      });
+    } else {
+      final data = doc.data()!;
+      final resets = (data['totalResets'] as num?)?.toInt() ?? 0;
+      await ref.update({
+        'currentStreak': 0,
+        'startDate': todayKey,
+        'lastResetDate': todayKey,
+        'totalResets': resets + 1,
+      });
+    }
+  }
+
+  Future<void> updateNofapStreak(int newStreak) async {
+    final uid = _uid;
+    final ref = _nofapRef;
+    if (uid == null || ref == null) return;
+
+    final doc = await ref.get();
+    if (!doc.exists) {
+      await ref.set({
+        'userId': uid,
+        'currentStreak': newStreak,
+        'longestStreak': newStreak,
+        'startDate': todayKey,
+        'lastResetDate': todayKey,
+        'totalResets': 0,
+      });
+    } else {
+      final data = doc.data()!;
+      var longest = (data['longestStreak'] as num?)?.toInt() ?? 0;
+      if (newStreak > longest) longest = newStreak;
+      await ref.update({
+        'currentStreak': newStreak,
+        'longestStreak': longest,
+      });
+    }
+  }
 
   Future<Map<String, dynamic>> loadWellnessContext() async {
     final uid = _uid;

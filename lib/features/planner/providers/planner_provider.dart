@@ -84,6 +84,13 @@ class WellnessRoutineNotifier extends AsyncNotifier<WellnessRoutinePlan?> {
     await refreshDailyBenefit();
   }
 
+  Future<void> updateNofapStreak(int newStreak) async {
+    if (state.value == null) return;
+    await ref.read(wellnessRoutineRepositoryProvider).updateNofapStreak(newStreak);
+    await ref.read(doctorNoteRepositoryProvider).expireAll();
+    await refreshDailyBenefit();
+  }
+
   Future<void> refreshDailyBenefit() async {
     if (state.value == null) {
       return;
