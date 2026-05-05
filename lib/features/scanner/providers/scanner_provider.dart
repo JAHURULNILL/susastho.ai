@@ -182,9 +182,11 @@ class ScannerNotifier extends Notifier<ScannerState> {
                   'description': description ?? effectiveDescription,
                   'profile': profile.toJson(),
                   'mode': state.mode.name,
+                  'mealSlot': state.mealSlot.key,
                 },
               ),
             );
+        ref.invalidate(offlineQueueCountProvider);
       }
 
       final message = raw.contains('BACKEND_BASE_URL')

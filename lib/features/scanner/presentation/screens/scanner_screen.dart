@@ -229,7 +229,7 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
                   onChanged: (value) => ref.read(scannerProvider.notifier).updateDescription(value),
                   decoration: InputDecoration(
                     hintText: switch (state.mode) {
-                      ScanInputMode.meal => 'যেমন: dupure ভাত, নইনা মাছের ঝোল আর ডাল খেয়েছি',
+                      ScanInputMode.meal => 'যেমন: দুপুরে ভাত, নয়না মাছের ঝোল আর ডাল খেয়েছি',
                       ScanInputMode.menu => 'যেমন: এই মেনু থেকে আমার জন্য ভালো ২টা খাবার বলুন',
                       ScanInputMode.receipt => 'যেমন: এই সপ্তাহের বাজার কতটা স্বাস্থ্যকর?',
                     },
@@ -620,7 +620,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'প্রোটিন',
     expensiveValue: 'মাঝারি',
     affordableValue: 'ভালো',
-    reason: 'ডিম কম processed, বেশি practical, আর প্রোটিনও নির্ভরযোগ্য।',
+      reason: 'ডিম কম প্রক্রিয়াজাত, বেশি ব্যবহারিক, আর প্রোটিনও নির্ভরযোগ্য।',
     verdict: 'সসেজের বদলে ডিম ভালো।',
   ),
   _AffordableAlternative(
@@ -629,7 +629,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'প্রোটিন+এনার্জি',
     expensiveValue: 'মাঝারি',
     affordableValue: 'ভালো',
-    reason: 'ডিম আর কলা সহজ, সস্তা, আর real food হিসেবে বেশি উপকারী।',
+      reason: 'ডিম আর কলা সহজ, সস্তা, আর প্রকৃত খাবার হিসেবে বেশি উপকারী।',
     verdict: 'প্রোটিন বারের বদলে ডিম-কলা নিন।',
   ),
   _AffordableAlternative(
@@ -647,7 +647,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'হালকা এনার্জি',
     expensiveValue: 'মাঝারি',
     affordableValue: 'ভালো',
-    reason: 'মুড়ি সহজপাচ্য ও সস্তা, দুধ দিলে balanced snack হয়।',
+      reason: 'মুড়ি সহজপাচ্য ও সস্তা, দুধ দিলে সুষম নাস্তা হয়।',
     verdict: 'সিরিয়ালের বদলে মুড়ি-দুধ রাখুন।',
   ),
   _AffordableAlternative(
@@ -656,7 +656,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'হাইড্রেশন',
     expensiveValue: 'কম',
     affordableValue: 'ভালো',
-    reason: 'ডাবের পানিতে natural electrolyte থাকে, অতিরিক্ত চিনি কম।',
+      reason: 'ডাবের পানিতে প্রাকৃতিক ইলেকট্রোলাইট থাকে, অতিরিক্ত চিনি কম।',
     verdict: 'জুসের বদলে ডাবের পানি নিন।',
   ),
   _AffordableAlternative(
@@ -665,7 +665,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'হাইড্রেশন',
     expensiveValue: 'কম',
     affordableValue: 'মাঝারি-ভালো',
-    reason: 'লেবুর শরবত কম খরচে সতেজ রাখে, অতিরিক্ত stimulant লাগে না।',
+      reason: 'লেবুর শরবত কম খরচে সতেজ রাখে, অতিরিক্ত উত্তেজক লাগে না।',
     verdict: 'এনার্জি ড্রিংকের বদলে লেবুর শরবত।',
   ),
   _AffordableAlternative(
@@ -710,7 +710,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'প্রোটিন',
     expensiveValue: 'কম',
     affordableValue: 'ভালো',
-    reason: 'ডাল স্যুপে sodium কম রেখে ঘরে ভালো nutrition পাওয়া যায়।',
+      reason: 'ডাল স্যুপে লবণ কম রেখে ঘরে ভালো পুষ্টি পাওয়া যায়।',
     verdict: 'প্যাকেট স্যুপের বদলে ডাল স্যুপ।',
   ),
   _AffordableAlternative(
@@ -719,7 +719,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'স্ন্যাক',
     expensiveValue: 'কম',
     affordableValue: 'ভালো',
-    reason: 'চিনা বাদাম বেশি satiating, ফ্যাট-প্রোটিনও দেয়।',
+      reason: 'চিনা বাদাম বেশি পেট ভরায়, ফ্যাট-প্রোটিনও দেয়।',
     verdict: 'চিপসের বদলে বাদাম বেছে নিন।',
   ),
   _AffordableAlternative(
@@ -728,7 +728,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'কম চিনি',
     expensiveValue: 'কম',
     affordableValue: 'মাঝারি-ভালো',
-    reason: 'চিড়া-মুড়ি মিক্সে processed sugar কমিয়ে snack করা যায়।',
+      reason: 'চিড়া-মুড়ি মিশিয়ে প্রক্রিয়াজাত চিনি কমিয়ে নাস্তা করা যায়।',
     verdict: 'বিস্কুটের বদলে চিড়া-মুড়ি।',
   ),
   _AffordableAlternative(
@@ -737,7 +737,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'কম চিনি',
     expensiveValue: 'কম',
     affordableValue: 'ভালো',
-    reason: 'টক দই ও ফল মিলে light dessert হয়, sugar spike তুলনামূলক কম।',
+      reason: 'টক দই ও ফল মিলে হালকা মিষ্টি খাবার হয়, রক্তে শর্করার ওঠানামাও তুলনামূলক কম।',
     verdict: 'আইসক্রিমের বদলে টক দই-ফল খান।',
   ),
   _AffordableAlternative(
@@ -746,7 +746,7 @@ const List<_AffordableAlternative> _affordableAlternatives = [
     keyNutrient: 'এনার্জি',
     expensiveValue: 'মাঝারি',
     affordableValue: 'ভালো',
-    reason: 'ঘরের shake কম খরচে বেশি nutrition দেয়।',
+      reason: 'ঘরের শরবত বা শেক কম খরচে বেশি পুষ্টি দেয়।',
     verdict: 'রেডিমেড শেকের বদলে ঘরের শেক নিন।',
   ),
 ];

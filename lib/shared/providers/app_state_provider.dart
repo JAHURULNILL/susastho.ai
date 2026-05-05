@@ -25,6 +25,7 @@ import '../../data/services/local_storage_service.dart';
 import '../../data/services/notification_service.dart';
 import '../../data/services/offline_queue_service.dart';
 import '../../data/services/offline_sync_service.dart';
+import '../../data/services/wellness_backend_service.dart';
 import '../../data/services/wellness_insight_service.dart';
 
 final sharedPreferencesProvider = Provider<SharedPreferencesAsync>((ref) {
@@ -146,6 +147,11 @@ final healthSyncServiceProvider = Provider<HealthSyncService>((ref) {
   return HealthSyncService(repository);
 });
 
+final wellnessBackendServiceProvider = Provider<WellnessBackendService>((ref) {
+  final auth = ref.watch(firebaseAuthProvider);
+  return WellnessBackendService(auth: auth);
+});
+
 final plannerRepositoryProvider = Provider<PlannerRepository>((ref) {
   final storage = ref.watch(localStorageServiceProvider);
   final dailySummaryRepository = ref.watch(dailySummaryRepositoryProvider);
@@ -166,7 +172,16 @@ final plannerRepositoryProvider = Provider<PlannerRepository>((ref) {
 
 final wellnessRoutineRepositoryProvider = Provider<WellnessRoutineRepository>((ref) {
   final storage = ref.watch(localStorageServiceProvider);
-  return WellnessRoutineRepository(storage);
+  ref.watch(firebaseUserProvider);
+  final auth = ref.watch(firebaseAuthProvider);
+  final firestore = ref.watch(firestoreProvider);
+  final backendService = ref.watch(wellnessBackendServiceProvider);
+  return WellnessRoutineRepository(
+    auth: auth,
+    firestore: firestore,
+    storage: storage,
+    backendService: backendService,
+  );
 });
 
 final doctorNoteRepositoryProvider = Provider<DoctorNoteRepository>((ref) {
@@ -240,6 +255,8 @@ class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
       final profile = ref.read(userProfileProvider).asData?.value;
       final steps = ref.read(todayStepsProvider).asData?.value;
       final sleep = ref.read(todaySleepProvider).asData?.value;
+      final wellnessContext = await ref.read(wellnessRoutineRepositoryProvider).loadWellnessContext();
+      final nofapStreak = (wellnessContext['nofapStreak'] as num?)?.toInt() ?? 0;
       if (profile != null) {
         final repository = ref.read(dailySummaryRepositoryProvider);
         final meals = await repository.watchTodayMeals().first;
@@ -254,9 +271,10 @@ class AppSettingsNotifier extends AsyncNotifier<AppSettings> {
               ),
               steps: steps,
               sleep: sleep,
+              nofapStreak: nofapStreak,
             );
       } else {
-        await ref.read(notificationServiceProvider).scheduleDailyReminders();
+        await ref.read(notificationServiceProvider).scheduleDailyReminders(nofapStreak: nofapStreak);
       }
     } else {
       await ref.read(notificationServiceProvider).cancelAll();
@@ -284,12 +302,36 @@ final weeklyWaterProvider = FutureProvider<Map<String, int>>((ref) async {
   return ref.watch(dailySummaryRepositoryProvider).loadCurrentWeekWater();
 });
 
+final previousWeeklyWaterProvider = FutureProvider<Map<String, int>>((ref) async {
+  final startOfCurrentWeek = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+  final previousWeek = startOfCurrentWeek.subtract(const Duration(days: 7));
+  return ref.watch(dailySummaryRepositoryProvider).loadWeekWater(weekStart: previousWeek);
+});
+
 final weeklyStepsProvider = FutureProvider<Map<String, int>>((ref) async {
   return ref.watch(healthMetricsRepositoryProvider).loadCurrentWeekSteps();
 });
 
+final previousWeeklyStepsProvider = FutureProvider<Map<String, int>>((ref) async {
+  final startOfCurrentWeek = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+  final previousWeek = startOfCurrentWeek.subtract(const Duration(days: 7));
+  return ref.watch(healthMetricsRepositoryProvider).loadWeekSteps(weekStart: previousWeek);
+});
+
 final weeklySleepProvider = FutureProvider<Map<String, double>>((ref) async {
   return ref.watch(healthMetricsRepositoryProvider).loadCurrentWeekSleep();
+});
+
+final previousWeeklySleepProvider = FutureProvider<Map<String, double>>((ref) async {
+  final startOfCurrentWeek = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+  final previousWeek = startOfCurrentWeek.subtract(const Duration(days: 7));
+  return ref.watch(healthMetricsRepositoryProvider).loadWeekSleep(weekStart: previousWeek);
+});
+
+final previousWeeklyCaloriesProvider = FutureProvider<Map<String, double>>((ref) async {
+  final startOfCurrentWeek = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+  final previousWeek = startOfCurrentWeek.subtract(const Duration(days: 7));
+  return ref.watch(dailySummaryRepositoryProvider).loadWeekCalories(weekStart: previousWeek);
 });
 
 final offlineQueueCountProvider = FutureProvider<int>((ref) async {

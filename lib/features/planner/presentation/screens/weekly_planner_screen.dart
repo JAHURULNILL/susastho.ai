@@ -136,7 +136,7 @@ class _PlanHeroCard extends StatelessWidget {
           Text('আপনার জন্য এই সপ্তাহের খাবার পরিকল্পনা', style: AppTextStyles.screenTitle.copyWith(color: AppColors.white)),
           const SizedBox(height: 10),
           Text(
-            'এই সপ্তাহে আপনার শরীর, লক্ষ্য আর সমস্যার ভিত্তিতে ডিম, দুধ, কলা, মাছ, মাংস, ছোলা, কাঠবাদাম, ভাত আর সবজির balance রাখা হয়েছে।',
+            'এই সপ্তাহে আপনার শরীর, লক্ষ্য আর সমস্যার ভিত্তিতে ডিম, দুধ, কলা, মাছ, মাংস, ছোলা, কাঠবাদাম, ভাত আর সবজির ভারসাম্য রাখা হয়েছে।',
             style: AppTextStyles.body.copyWith(color: Colors.white.withValues(alpha: 0.90)),
           ),
           const SizedBox(height: 16),
@@ -512,8 +512,8 @@ class _ExerciseRoadmapCard extends ConsumerWidget {
                 const SizedBox(height: 8),
                 Text(
                   points >= 100
-                      ? 'আপনি ${BengaliFormatters.toBengaliNumber(points ~/ 100)}টি badge অর্জন করেছেন।'
-                      : 'পরের badge পেতে আরও ${BengaliFormatters.toBengaliNumber(nextBadgeAt - points)} পয়েন্ট বাকি।',
+                      ? 'আপনি ${BengaliFormatters.toBengaliNumber(points ~/ 100)}টি ব্যাজ অর্জন করেছেন।'
+                      : 'পরের ব্যাজ পেতে আরও ${BengaliFormatters.toBengaliNumber(nextBadgeAt - points)} পয়েন্ট বাকি।',
                   style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
                 ),
               ],
@@ -623,8 +623,8 @@ class _WeeklyProgressHeader extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             badgeCount > 0
-                ? 'আপনি ${BengaliFormatters.toBengaliNumber(badgeCount)}টি badge পেয়েছেন।'
-                : 'প্রতিটি check mark আপনাকে ধীরে ধীরে লক্ষ্য পূরণের দিকে এগিয়ে নিচ্ছে।',
+                ? 'আপনি ${BengaliFormatters.toBengaliNumber(badgeCount)}টি ব্যাজ পেয়েছেন।'
+                : 'প্রতিটি চেকমার্ক আপনাকে ধীরে ধীরে লক্ষ্য পূরণের দিকে এগিয়ে নিচ্ছে।',
             style: AppTextStyles.body.copyWith(color: AppColors.textSecondary),
           ),
         ],
@@ -666,9 +666,9 @@ WeeklyMealPlan _buildPreviewPlan(UserProfile profile) {
     },
     weeklyTips: [
       'এই সপ্তাহে প্রায় ${BengaliFormatters.toBengaliNumber(proteinHint)}g প্রোটিন, ${BengaliFormatters.toBengaliNumber(carbHint)}g কার্ব আর ${BengaliFormatters.toBengaliNumber(fatHint)}g ফ্যাটের দিকে লক্ষ্য রাখুন।',
-      'ডিম, দুধ, মাছ, মাংস, ছোলা, কাঠবাদাম আর ভাত balance করে রাখা হয়েছে।',
+      'ডিম, দুধ, মাছ, মাংস, ছোলা, কাঠবাদাম আর ভাত ভারসাম্য রেখে সাজানো হয়েছে।',
     ],
-    specialNotes: 'আপনার প্রোফাইল অনুযায়ী এমনভাবে খাবার সাজানো হয়েছে যেন শক্তি, recovery আর স্বাভাবিক সুস্থ জীবনযাপন steady থাকে।',
+    specialNotes: 'আপনার প্রোফাইল অনুযায়ী এমনভাবে খাবার সাজানো হয়েছে যেন শক্তি, পুনরুদ্ধার আর স্বাভাবিক সুস্থ জীবনযাপন স্থির থাকে।',
   );
 }
 
@@ -676,24 +676,24 @@ List<WeeklyExerciseItem> _buildPreviewExercises(UserProfile profile) {
   return [
     WeeklyExerciseItem(
       id: '',
-      exerciseTitle: 'সকাল • ৫ মিনিট breathing',
+      exerciseTitle: 'সকাল • ৫ মিনিট শ্বাস-প্রশ্বাস অনুশীলন',
       durationMinutes: 5,
       caloriesBurned: 20,
       note: '',
-      conditionBenefit: 'দিনটা steady শুরু করতে আর মানসিক চাপ কমাতে সাহায্য করবে।',
+      conditionBenefit: 'দিনটা স্থিরভাবে শুরু করতে আর মানসিক চাপ কমাতে সাহায্য করবে।',
       completed: false,
       dateKey: '',
       loggedAt: DateTime.now(),
     ),
     WeeklyExerciseItem(
       id: '',
-      exerciseTitle: 'দুপুর • ১০ মিনিট brisk walk',
+      exerciseTitle: 'দুপুর • ১০ মিনিট দ্রুত হাঁটা',
       durationMinutes: 10,
       caloriesBurned: 45,
       note: '',
       conditionBenefit: profile.conditions.contains(HealthCondition.diabetes)
-          ? 'রক্তে শর্করা control-এ রাখতে সাহায্য করবে।'
-          : 'দৈনিক activity আর metabolism বাড়াবে।',
+          ? 'রক্তে শর্করা নিয়ন্ত্রণে রাখতে সাহায্য করবে।'
+          : 'দৈনিক চলাফেরা আর বিপাকক্রিয়া বাড়াবে।',
       completed: false,
       dateKey: '',
       loggedAt: DateTime.now(),
@@ -701,25 +701,25 @@ List<WeeklyExerciseItem> _buildPreviewExercises(UserProfile profile) {
     WeeklyExerciseItem(
       id: '',
       exerciseTitle: profile.conditions.contains(HealthCondition.ed) || profile.conditions.contains(HealthCondition.prematureEjaculation)
-          ? 'বিকাল • ১০ মিনিট kegel exercise'
-          : 'বিকাল • ১০ মিনিট squat',
+          ? 'বিকাল • ১০ মিনিট কেগেল অনুশীলন'
+          : 'বিকাল • ১০ মিনিট স্কোয়াট',
       durationMinutes: 10,
       caloriesBurned: 40,
       note: '',
       conditionBenefit: profile.conditions.contains(HealthCondition.ed) || profile.conditions.contains(HealthCondition.prematureEjaculation)
-          ? 'Pelvic floor শক্তিশালী করতে সাহায্য করবে।'
-          : 'শরীরের lower body activation আর stamina বাড়াবে।',
+          ? 'পেলভিক ফ্লোর শক্তিশালী করতে সাহায্য করবে।'
+          : 'শরীরের নিচের অংশের সক্রিয়তা আর সহনশীলতা বাড়াবে।',
       completed: false,
       dateKey: '',
       loggedAt: DateTime.now(),
     ),
     WeeklyExerciseItem(
       id: '',
-      exerciseTitle: 'রাত • ১০ মিনিট meditation',
+      exerciseTitle: 'রাত • ১০ মিনিট মেডিটেশন',
       durationMinutes: 10,
       caloriesBurned: 20,
       note: '',
-      conditionBenefit: 'Recovery আর ঘুমের quality ভালো করতে সাহায্য করবে।',
+      conditionBenefit: 'পুনরুদ্ধার আর ঘুমের মান ভালো করতে সাহায্য করবে।',
       completed: false,
       dateKey: '',
       loggedAt: DateTime.now(),

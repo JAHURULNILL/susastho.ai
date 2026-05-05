@@ -141,10 +141,38 @@ class DoctorNoteRepository {
   Future<Map<String, dynamic>> _historicalContext() async {
     final sleep = await _healthMetricsRepository.watchTodaySleep().first;
     final steps = await _healthMetricsRepository.watchTodaySteps().first;
+    final uid = _auth?.currentUser?.uid;
+    Map<String, int> wellnessStreaks = const {};
+    List<String> completedToday = const [];
+    int nofapStreak = 0;
+
+    if (uid != null && _firestore != null) {
+      final streakSnapshot = await _firestore.collection('wellness_streaks').where('userId', isEqualTo: uid).get();
+      final todaySnapshot = await _firestore
+          .collection('wellness_logs')
+          .where('userId', isEqualTo: uid)
+          .where('date', isEqualTo: _dailySummaryRepository.todayKey)
+          .get();
+      final nofapSnapshot = await _firestore.collection('nofap_tracker').doc(uid).get();
+
+      wellnessStreaks = {
+        for (final doc in streakSnapshot.docs)
+          (doc.data()['moduleId'] as String? ?? ''): (doc.data()['currentStreak'] as num?)?.toInt() ?? 0,
+      }..remove('');
+      completedToday = todaySnapshot.docs
+          .map((doc) => doc.data()['moduleId'] as String? ?? '')
+          .where((item) => item.isNotEmpty)
+          .toList();
+      nofapStreak = nofapSnapshot.exists ? (nofapSnapshot.data()?['currentStreak'] as num?)?.toInt() ?? 0 : 0;
+    }
+
     return {
       ...await _dailySummaryRepository.loadHistoricalContext(),
       'todaySleepHours': sleep?.hours ?? 0,
       'todaySteps': steps?.steps ?? 0,
+      'wellnessStreaks': wellnessStreaks,
+      'wellnessCompletedToday': completedToday,
+      'nofapStreak': nofapStreak,
     };
   }
 }

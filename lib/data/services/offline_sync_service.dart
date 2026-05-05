@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:image_picker/image_picker.dart';
 
+import '../models/daily_summary.dart';
 import '../models/food_analysis_result.dart';
 import '../models/offline_queue_item.dart';
 import '../models/user_profile.dart';
@@ -29,9 +30,11 @@ class OfflineSyncService {
       try {
         final result = await _runItem(item);
         if (result != null && item.type == OfflineQueueItemType.mealScan) {
+          final slotKey = item.payload['mealSlot'] as String?;
           await _dailySummaryRepository.addMeal(
             result,
             imagePath: item.payload['imagePath'] as String?,
+            slot: slotKey == null ? null : MealSlotX.fromKey(slotKey),
           );
         }
         await _queueService.remove(item.id);

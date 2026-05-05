@@ -37,8 +37,6 @@ class DailySummaryRepository {
   String? get _uid => _auth?.currentUser?.uid;
   String? get _mealsCacheKey => _uid == null ? null : 'today_meals_${_uid!}_$todayKey';
   String? get _waterCacheKey => _uid == null ? null : 'today_water_${_uid!}_$todayKey';
-  String? get _weeklyCaloriesCacheKey => _uid == null ? null : 'weekly_calories_${_uid!}_${_formatDate(_startOfWeek(DateTime.now()))}';
-  String? get _weeklyWaterCacheKey => _uid == null ? null : 'weekly_water_${_uid!}_${_formatDate(_startOfWeek(DateTime.now()))}';
 
   Stream<List<MealLogEntry>> watchTodayMeals() async* {
     final cacheKey = _mealsCacheKey;
@@ -140,7 +138,12 @@ class DailySummaryRepository {
   }
 
   Future<Map<String, double>> loadCurrentWeekCalories() async {
-    final cacheKey = _weeklyCaloriesCacheKey;
+    return loadWeekCalories();
+  }
+
+  Future<Map<String, double>> loadWeekCalories({DateTime? weekStart}) async {
+    final targetWeek = _startOfWeek(weekStart ?? DateTime.now());
+    final cacheKey = _weeklyCaloriesCacheKeyFor(targetWeek);
     if (cacheKey != null) {
       final cached = await _storage.readJson(cacheKey);
       if (cached != null && cached.isNotEmpty) {
@@ -153,7 +156,7 @@ class DailySummaryRepository {
       return const {};
     }
 
-    final start = _startOfWeek(DateTime.now());
+    final start = targetWeek;
     final end = start.add(const Duration(days: 6));
     final snapshot = await ref
         .where('date', isGreaterThanOrEqualTo: _formatDate(start))
@@ -178,7 +181,12 @@ class DailySummaryRepository {
   }
 
   Future<Map<String, int>> loadCurrentWeekWater() async {
-    final cacheKey = _weeklyWaterCacheKey;
+    return loadWeekWater();
+  }
+
+  Future<Map<String, int>> loadWeekWater({DateTime? weekStart}) async {
+    final targetWeek = _startOfWeek(weekStart ?? DateTime.now());
+    final cacheKey = _weeklyWaterCacheKeyFor(targetWeek);
     if (cacheKey != null) {
       final cached = await _storage.readJson(cacheKey);
       if (cached != null && cached.isNotEmpty) {
@@ -191,7 +199,7 @@ class DailySummaryRepository {
       return const {};
     }
 
-    final start = _startOfWeek(DateTime.now());
+    final start = targetWeek;
     final end = start.add(const Duration(days: 6));
     final snapshot = await ref
         .where('date', isGreaterThanOrEqualTo: _formatDate(start))
@@ -352,4 +360,10 @@ class DailySummaryRepository {
     final local = DateTime(date.year, date.month, date.day);
     return local.subtract(Duration(days: local.weekday - 1));
   }
+
+  String? _weeklyCaloriesCacheKeyFor(DateTime weekStart) =>
+      _uid == null ? null : 'weekly_calories_${_uid!}_${_formatDate(weekStart)}';
+
+  String? _weeklyWaterCacheKeyFor(DateTime weekStart) =>
+      _uid == null ? null : 'weekly_water_${_uid!}_${_formatDate(weekStart)}';
 }

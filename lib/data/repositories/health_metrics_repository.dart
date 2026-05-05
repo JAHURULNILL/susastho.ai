@@ -35,8 +35,6 @@ class HealthMetricsRepository {
   String? get _sleepCacheKey => _uid == null ? null : 'sleep_${_uid!}_$todayKey';
   String? get _stepsCacheKey => _uid == null ? null : 'steps_${_uid!}_$todayKey';
   String? get _weightCacheKey => _uid == null ? null : 'weight_history_${_uid!}';
-  String? get _weeklyStepsCacheKey => _uid == null ? null : 'weekly_steps_${_uid!}_${_weekKey(DateTime.now())}';
-  String? get _weeklySleepCacheKey => _uid == null ? null : 'weekly_sleep_${_uid!}_${_weekKey(DateTime.now())}';
 
   Stream<SleepLogRecord?> watchTodaySleep() async* {
     final cacheKey = _sleepCacheKey;
@@ -207,7 +205,12 @@ class HealthMetricsRepository {
   }
 
   Future<Map<String, int>> loadCurrentWeekSteps() async {
-    final cacheKey = _weeklyStepsCacheKey;
+    return loadWeekSteps();
+  }
+
+  Future<Map<String, int>> loadWeekSteps({DateTime? weekStart}) async {
+    final targetWeek = _startOfWeek(weekStart ?? DateTime.now());
+    final cacheKey = _weeklyStepsCacheKeyFor(targetWeek);
     if (cacheKey != null) {
       final cached = await _storage.readJson(cacheKey);
       if (cached != null && cached.isNotEmpty) {
@@ -220,7 +223,7 @@ class HealthMetricsRepository {
       return const {};
     }
 
-    final start = _startOfWeek(DateTime.now());
+    final start = targetWeek;
     final end = start.add(const Duration(days: 6));
     final snapshot = await ref
         .where('dateKey', isGreaterThanOrEqualTo: _formatDate(start))
@@ -239,7 +242,12 @@ class HealthMetricsRepository {
   }
 
   Future<Map<String, double>> loadCurrentWeekSleep() async {
-    final cacheKey = _weeklySleepCacheKey;
+    return loadWeekSleep();
+  }
+
+  Future<Map<String, double>> loadWeekSleep({DateTime? weekStart}) async {
+    final targetWeek = _startOfWeek(weekStart ?? DateTime.now());
+    final cacheKey = _weeklySleepCacheKeyFor(targetWeek);
     if (cacheKey != null) {
       final cached = await _storage.readJson(cacheKey);
       if (cached != null && cached.isNotEmpty) {
@@ -252,7 +260,7 @@ class HealthMetricsRepository {
       return const {};
     }
 
-    final start = _startOfWeek(DateTime.now());
+    final start = targetWeek;
     final end = start.add(const Duration(days: 6));
     final snapshot = await ref
         .where('dateKey', isGreaterThanOrEqualTo: _formatDate(start))
@@ -276,10 +284,14 @@ class HealthMetricsRepository {
     return '${date.year}-$month-$day';
   }
 
-  String _weekKey(DateTime date) => _formatDate(_startOfWeek(date));
-
   DateTime _startOfWeek(DateTime date) {
     final local = DateTime(date.year, date.month, date.day);
     return local.subtract(Duration(days: local.weekday - 1));
   }
+
+  String? _weeklyStepsCacheKeyFor(DateTime weekStart) =>
+      _uid == null ? null : 'weekly_steps_${_uid!}_${_formatDate(weekStart)}';
+
+  String? _weeklySleepCacheKeyFor(DateTime weekStart) =>
+      _uid == null ? null : 'weekly_sleep_${_uid!}_${_formatDate(weekStart)}';
 }

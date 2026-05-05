@@ -9,7 +9,6 @@ import '../../../../core/utils/bengali_formatters.dart';
 import '../../../../core/widgets/info_card.dart';
 import '../../../../core/widgets/primary_button.dart';
 import '../../../../data/models/food_analysis_result.dart';
-import '../../../../data/models/daily_summary.dart';
 import '../../../home/presentation/screens/home_shell.dart';
 import '../../../home/providers/home_provider.dart';
 import '../../providers/scanner_provider.dart';

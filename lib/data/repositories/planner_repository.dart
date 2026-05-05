@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -119,24 +121,16 @@ class PlannerRepository {
 
     final existing = await ref.where('dateKey', isEqualTo: todayKey).limit(1).get();
     if (existing.docs.isNotEmpty) {
+      final source = existing.docs.first.data()['generatedBy'] as String?;
+      if (source != 'ai') {
+        unawaited(_refreshTodayExercisesWithAi(profile));
+      }
       return;
     }
 
     final generated = _buildInstantExercises(profile);
-    final batch = _firestore!.batch();
-    final now = DateTime.now();
-    for (final item in generated) {
-      final doc = ref.doc();
-      batch.set(
-        doc,
-        item.copyWith(
-          id: doc.id,
-          dateKey: todayKey,
-          loggedAt: now,
-        ).toJson(),
-      );
-    }
-    await batch.commit();
+    await _seedExercises(generated, source: 'instant');
+    unawaited(_refreshTodayExercisesWithAi(profile));
   }
 
   Future<void> toggleExercise(String exerciseId, bool completed) async {
@@ -157,24 +151,18 @@ class PlannerRepository {
     final existing = await ref.get();
     final data = existing.data();
     if (data != null && data['plan'] is Map) {
+      final source = data['source'] as String?;
+      if (source != 'ai') {
+        unawaited(_refreshCurrentWeekMealPlanWithAi(profile));
+      }
       return WeeklyMealPlan.fromJson(
         Map<String, dynamic>.from(data['plan'] as Map),
       );
     }
 
     final generated = _buildInstantWeeklyPlan(profile);
-    await ref.set(
-      {
-        'weekOf': weekKey,
-        'generatedAt': FieldValue.serverTimestamp(),
-        'plan': generated.toJson(),
-      },
-      SetOptions(merge: true),
-    );
-    final cacheKey = _mealPlanCacheKey;
-    if (cacheKey != null) {
-      await _storage.saveJson(cacheKey, generated.toJson());
-    }
+    await _persistMealPlan(generated, source: 'instant');
+    unawaited(_refreshCurrentWeekMealPlanWithAi(profile));
     return generated;
   }
 
@@ -187,22 +175,162 @@ class PlannerRepository {
     final existing = await ref.get();
     final data = existing.data();
     if (data != null && data['plan'] is Map) {
+      final source = data['source'] as String?;
+      if (source != 'ai') {
+        unawaited(_refreshCurrentWeekMealPlanWithAi(profile));
+      }
       return;
     }
 
     final generated = _buildInstantWeeklyPlan(profile);
+    await _persistMealPlan(generated, source: 'instant');
+    unawaited(_refreshCurrentWeekMealPlanWithAi(profile));
+  }
+
+  Future<void> _seedExercises(
+    List<WeeklyExerciseItem> items, {
+    required String source,
+  }) async {
+    final ref = _exerciseRef;
+    if (ref == null) {
+      return;
+    }
+
+    final batch = _firestore!.batch();
+    final now = DateTime.now();
+    for (final item in items) {
+      final doc = ref.doc();
+      batch.set(
+        doc,
+        {
+          ...item
+              .copyWith(
+                id: doc.id,
+                dateKey: todayKey,
+                loggedAt: now,
+              )
+              .toJson(),
+          'generatedBy': source,
+        },
+      );
+    }
+    await batch.commit();
+  }
+
+  Future<void> _refreshTodayExercisesWithAi(UserProfile profile) async {
+    final ref = _exerciseRef;
+    if (ref == null) {
+      return;
+    }
+
+    try {
+      final historicalContext = await _loadHistoricalContext();
+      final generated = await _aiBackendService.generateExercisePlan(
+        profile: profile,
+        historicalContext: historicalContext,
+      );
+      if (generated.isEmpty) {
+        return;
+      }
+
+      final existingSnapshot = await ref.where('dateKey', isEqualTo: todayKey).get();
+      final sortedDocs = existingSnapshot.docs.toList()
+        ..sort((a, b) {
+          final aRaw = a.data()['loggedAt'] as String? ?? '';
+          final bRaw = b.data()['loggedAt'] as String? ?? '';
+          final aTime = DateTime.tryParse(aRaw) ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final bTime = DateTime.tryParse(bRaw) ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return aTime.compareTo(bTime);
+        });
+      final existingItems = sortedDocs
+          .map((doc) => WeeklyExerciseItem.fromJson(doc.id, doc.data()))
+          .toList();
+
+      final batch = _firestore!.batch();
+      final now = DateTime.now();
+      for (var index = 0; index < generated.length; index++) {
+        final sourceItem = generated[index];
+        final docRef = index < sortedDocs.length
+            ? sortedDocs[index].reference
+            : ref.doc();
+        final wasCompleted = index < existingItems.length && existingItems[index].completed;
+        batch.set(
+          docRef,
+          {
+            ...sourceItem
+                .copyWith(
+                  id: docRef.id,
+                  completed: wasCompleted,
+                  dateKey: todayKey,
+                  loggedAt: now.add(Duration(minutes: index)),
+                )
+                .toJson(),
+            'generatedBy': 'ai',
+          },
+          SetOptions(merge: true),
+        );
+      }
+
+      for (var index = generated.length; index < sortedDocs.length; index++) {
+        batch.delete(sortedDocs[index].reference);
+      }
+
+      await batch.commit();
+    } catch (_) {
+      // Keep the instant exercise plan when AI refresh fails.
+    }
+  }
+
+  Future<void> _persistMealPlan(
+    WeeklyMealPlan plan, {
+    required String source,
+  }) async {
+    final ref = _mealPlanRef?.doc(weekKey);
+    if (ref == null) {
+      return;
+    }
+
     await ref.set(
       {
         'weekOf': weekKey,
         'generatedAt': FieldValue.serverTimestamp(),
-        'plan': generated.toJson(),
+        'source': source,
+        'plan': plan.toJson(),
       },
       SetOptions(merge: true),
     );
+
     final cacheKey = _mealPlanCacheKey;
     if (cacheKey != null) {
-      await _storage.saveJson(cacheKey, generated.toJson());
+      await _storage.saveJson(cacheKey, plan.toJson());
     }
+  }
+
+  Future<void> _refreshCurrentWeekMealPlanWithAi(UserProfile profile) async {
+    try {
+      final historicalContext = await _loadHistoricalContext();
+      final generated = await _aiBackendService.generateMealPlan(
+        profile: profile,
+        weekOf: weekKey,
+        historicalContext: historicalContext,
+      );
+      await _persistMealPlan(generated, source: 'ai');
+    } catch (_) {
+      // Keep the instant weekly plan when AI refresh fails.
+    }
+  }
+
+  Future<Map<String, dynamic>> _loadHistoricalContext() async {
+    final dailyContext = await _dailySummaryRepository.loadHistoricalContext();
+    final weeklySteps = await _healthMetricsRepository.loadCurrentWeekSteps();
+    final weeklySleep = await _healthMetricsRepository.loadCurrentWeekSleep();
+    return {
+      ...dailyContext,
+      'weeklySteps': weeklySteps,
+      'weeklySleep': weeklySleep,
+      'todayKey': todayKey,
+      'weekKey': weekKey,
+    };
   }
 
   WeeklyMealPlan _buildInstantWeeklyPlan(UserProfile profile) {

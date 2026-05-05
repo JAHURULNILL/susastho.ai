@@ -1,5 +1,6 @@
 import 'dart:ui';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -41,6 +42,7 @@ class HomeShell extends ConsumerWidget {
       }
       ref.watch(_plannerBootstrapProvider);
       ref.watch(_offlineSyncBootstrapProvider);
+      ref.watch(_queueAutoSyncProvider);
       if (settings?.notificationsEnabled ?? true) {
         ref.watch(_smartNotificationBootstrapProvider);
       }
@@ -210,6 +212,20 @@ final _healthSyncBootstrapProvider = FutureProvider<void>((ref) async {
 
 final _offlineSyncBootstrapProvider = FutureProvider<void>((ref) async {
   await ref.read(offlineSyncServiceProvider).processQueue();
+  ref.invalidate(offlineQueueCountProvider);
+});
+
+final _queueAutoSyncProvider = Provider<void>((ref) {
+  final subscription = Connectivity().onConnectivityChanged.listen((results) async {
+    final hasConnection = results.any((item) => item != ConnectivityResult.none);
+    if (!hasConnection) {
+      return;
+    }
+    await ref.read(offlineSyncServiceProvider).processQueue();
+    ref.invalidate(offlineQueueCountProvider);
+  });
+
+  ref.onDispose(subscription.cancel);
 });
 
 final _smartNotificationBootstrapProvider = FutureProvider<void>((ref) async {
@@ -221,12 +237,14 @@ final _smartNotificationBootstrapProvider = FutureProvider<void>((ref) async {
   if (profile == null || summary == null || settings == null || !settings.notificationsEnabled) {
     return;
   }
+  final wellnessContext = await ref.read(wellnessRoutineRepositoryProvider).loadWellnessContext();
   await ref.read(notificationServiceProvider).scheduleContextualReminders(
         profile: profile,
         settings: settings,
         summary: summary,
         steps: steps,
         sleep: sleep,
+        nofapStreak: (wellnessContext['nofapStreak'] as num?)?.toInt() ?? 0,
       );
 });
 

@@ -95,19 +95,19 @@ class HomeScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 14),
-          Text('à¦†à¦œà¦•à§‡à¦° à¦…à§à¦¯à¦¾à¦•à§à¦Ÿà¦¿à¦­à¦¿à¦Ÿà¦¿', style: AppTextStyles.cardTitle),
+          Text('আজকের অ্যাক্টিভিটি', style: AppTextStyles.cardTitle),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: _QuickStatCard(
-                  label: 'à¦¸à§à¦Ÿà§‡à¦ª',
+                  label: 'স্টেপ',
                   value: todaySteps?.steps == null || todaySteps!.steps == 0
-                      ? 'â€”'
+                      ? '—'
                       : BengaliFormatters.toBengaliNumber(todaySteps.steps),
                   sublabel: profile.dailyStepTarget > 0
                       ? '/${BengaliFormatters.toBengaliNumber(profile.dailyStepTarget)}'
-                      : 'à¦†à¦œ',
+                      : 'আজ',
                   background: AppColors.bluePale,
                   icon: Icons.directions_walk_rounded,
                   accent: AppColors.blue,
@@ -116,11 +116,11 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _QuickStatCard(
-                  label: 'à¦˜à§à¦®',
+                  label: 'ঘুম',
                   value: todaySleep == null || todaySleep.hours == 0
-                      ? 'â€”'
+                      ? '—'
                       : BengaliFormatters.toBengaliNumber(todaySleep.hours, fractionDigits: 1),
-                  sublabel: 'à¦˜à¦£à§à¦Ÿà¦¾',
+                  sublabel: 'ঘণ্টা',
                   background: const Color(0xFFF2EEFF),
                   icon: Icons.bedtime_rounded,
                   accent: const Color(0xFF6C5CE7),
@@ -129,9 +129,9 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _QuickStatCard(
-                  label: 'à¦¸à§à¦Ÿà§à¦°à¦¿à¦•',
-                  value: streak == 0 ? 'â€”' : BengaliFormatters.toBengaliNumber(streak),
-                  sublabel: streak == 0 ? 'à¦¶à§à¦°à§ à¦¹à§Ÿà¦¨à¦¿' : 'à¦¦à¦¿à¦¨',
+                  label: 'স্ট্রিক',
+                  value: streak == 0 ? '—' : BengaliFormatters.toBengaliNumber(streak),
+                  sublabel: streak == 0 ? 'শুরু হয়নি' : 'দিন',
                   background: AppColors.amberPale,
                   icon: Icons.local_fire_department_rounded,
                   accent: AppColors.amber,
@@ -197,29 +197,29 @@ class HomeScreen extends ConsumerWidget {
 
     if (summary.meals.isEmpty) {
       if (now.hour < 11) {
-        return '${profile.name.split(' ').first}, à¦¸à¦•à¦¾à¦²à¦Ÿà¦¾ à¦¹à¦¾à¦²à¦•à¦¾ à¦•à¦¿à¦¨à§à¦¤à§ à¦ªà§à¦·à§à¦Ÿà¦¿à¦•à¦° à¦–à¦¾à¦¬à¦¾à¦° à¦¦à¦¿à§Ÿà§‡ à¦¶à§à¦°à§ à¦•à¦°à§à¦¨à¥¤ à¦†à¦œà¦•à§‡à¦° à¦ªà§à¦°à¦¥à¦® à¦–à¦¾à¦¬à¦¾à¦° à¦²à¦— à¦•à¦°à¦²à§‡à¦‡ à¦†à¦®à¦¿ à¦ªà¦°à§‡à¦° à¦ªà¦°à¦¾à¦®à¦°à§à¦¶ à¦†à¦°à¦“ à¦¨à¦¿à¦°à§à¦­à§à¦²à¦­à¦¾à¦¬à§‡ à¦¦à§‡à¦¬à¥¤';
+        return '${profile.name.split(' ').first}, সকালটা হালকা কিন্তু পুষ্টিকর খাবার দিয়ে শুরু করুন। আজকের প্রথম খাবার লগ করলেই আমি পরের পরামর্শ আরও নির্ভুলভাবে দেব।';
       }
-      return '${profile.name.split(' ').first}, à¦†à¦œ à¦à¦–à¦¨à§‹ à¦•à§‹à¦¨à§‹ à¦–à¦¾à¦¬à¦¾à¦° à¦²à¦— à¦¹à§Ÿà¦¨à¦¿à¥¤ à¦à¦–à¦¨ à¦¯à¦¾ à¦–à¦¾à¦šà§à¦›à§‡à¦¨ à¦¸à§‡à¦Ÿà¦¾ à¦²à¦¿à¦–à§‡ à¦¬à¦¾ à¦›à¦¬à¦¿ à¦¤à§à¦²à§‡ à¦¦à¦¿à¦¨, à¦†à¦®à¦¿ à¦¸à¦™à§à¦—à§‡ à¦¸à¦™à§à¦—à§‡ à¦—à¦¾à¦‡à¦¡ à¦•à¦°à¦¬à¥¤';
+      return '${profile.name.split(' ').first}, আজ এখনো কোনো খাবার লগ হয়নি। এখন যা খাচ্ছেন সেটা লিখে বা ছবি তুলে দিন, আমি সঙ্গে সঙ্গে গাইড করব।';
     }
 
     if (water < 3 && now.hour >= 10) {
       final remaining = 8 - water;
-      return '${profile.name.split(' ').first}, à¦†à¦œ à¦ªà¦¾à¦¨à¦¿ à¦à¦–à¦¨à§‹ à¦•à¦® à¦¹à§Ÿà§‡à¦›à§‡à¥¤ à¦à¦–à¦¨ à¦à¦• à¦—à§à¦²à¦¾à¦¸ à¦ªà¦¾à¦¨à¦¿ à¦–à§‡à¦²à§‡à¦‡ à¦²à¦•à§à¦·à§à¦¯à§‡à¦° à¦¦à¦¿à¦•à§‡ ${BengaliFormatters.toBengaliNumber(remaining - 1 < 0 ? 0 : remaining - 1)} à¦—à§à¦²à¦¾à¦¸ à¦¬à¦¾à¦•à¦¿ à¦¥à¦¾à¦•à¦¬à§‡à¥¤';
+      return '${profile.name.split(' ').first}, আজ পানি এখনো কম হয়েছে। এখন এক গ্লাস পানি খেলেই লক্ষ্যের দিকে ${BengaliFormatters.toBengaliNumber(remaining - 1 < 0 ? 0 : remaining - 1)} গ্লাস বাকি থাকবে।';
     }
 
     if (sleepHours > 0 && sleepHours < 6) {
-      return '${profile.name.split(' ').first}, à¦†à¦œà¦•à§‡à¦° à¦˜à§à¦® à¦•à¦® à¦¹à§Ÿà§‡à¦›à§‡à¥¤ à¦†à¦œ à¦¬à¦¿à¦•à§‡à¦²à§‡à¦° à¦ªà¦° à¦•à§à¦¯à¦¾à¦«à§‡à¦‡à¦¨ à¦•à¦®à¦¿à§Ÿà§‡ à¦°à¦¾à¦¤à§‡ à¦à¦•à¦Ÿà§ à¦†à¦—à§‡ à¦˜à§à¦®à¦¾à¦²à§‡ à¦¶à¦°à§€à¦° à¦¦à§à¦°à§à¦¤ recover à¦•à¦°à¦¬à§‡à¥¤';
+      return '${profile.name.split(' ').first}, আজকের ঘুম কম হয়েছে। আজ বিকেলের পর ক্যাফেইন কমিয়ে রাতে একটু আগে ঘুমালে শরীর দ্রুত recover করবে।';
     }
 
     if (proteinRatio < 0.35 && now.hour >= 18) {
-      return '${profile.name.split(' ').first}, à¦†à¦œ à¦ªà§à¦°à§‹à¦Ÿà¦¿à¦¨ à¦à¦–à¦¨à§‹ à¦•à¦® à¦†à¦›à§‡à¥¤ à¦°à¦¾à¦¤à§‡à¦° à¦–à¦¾à¦¬à¦¾à¦°à§‡ à¦¡à¦¿à¦®, à¦¡à¦¾à¦², à¦®à¦¾à¦› à¦¬à¦¾ à¦®à§à¦°à¦—à¦¿ à¦°à¦¾à¦–à¦²à§‡ balance à¦­à¦¾à¦²à§‹ à¦¹à¦¬à§‡à¥¤';
+      return '${profile.name.split(' ').first}, আজ প্রোটিন এখনো কম আছে। রাতের খাবারে ডিম, ডাল, মাছ বা মুরগি রাখলে balance ভালো হবে।';
     }
 
     if (stepCount > 0 && stepCount < profile.dailyStepTarget * 0.35 && now.hour >= 17) {
-      return '${profile.name.split(' ').first}, à¦†à¦œ à¦¹à¦¾à¦à¦Ÿà¦¾ à¦à¦–à¦¨à§‹ à¦•à¦® à¦¹à§Ÿà§‡à¦›à§‡à¥¤ à§§à§«â€“à§¨à§¦ à¦®à¦¿à¦¨à¦¿à¦Ÿ brisk walk à¦•à¦°à¦²à§‡ step target-à¦à¦° à¦¦à¦¿à¦•à§‡ à¦­à¦¾à¦²à§‹ à¦…à¦—à§à¦°à¦—à¦¤à¦¿ à¦¹à¦¬à§‡à¥¤';
+      return '${profile.name.split(' ').first}, আজ হাঁটা এখনো কম হয়েছে। ১৫–২০ মিনিট brisk walk করলে step target-এর দিকে ভালো অগ্রগতি হবে।';
     }
 
-    return '${profile.name.split(' ').first}, à¦†à¦œà¦•à§‡à¦° routine à¦®à§‹à¦Ÿà¦¾à¦®à§à¦Ÿà¦¿ à¦ à¦¿à¦• à¦†à¦›à§‡à¥¤ à¦à¦–à¦¨ à¦¶à§à¦§à§ à¦ªà¦¾à¦¨à¦¿, à¦¹à¦¾à¦à¦Ÿà¦¾ à¦†à¦° à¦ªà¦°à§‡à¦° meal-à¦à¦° balance à¦ à¦¿à¦• à¦°à¦¾à¦–à¦²à§‡à¦‡ à¦¦à¦¿à¦¨à¦Ÿà¦¾ à¦¸à§à¦¨à§à¦¦à¦° à¦¯à¦¾à¦¬à§‡à¥¤';
+    return '${profile.name.split(' ').first}, আজকের routine মোটামুটি ঠিক আছে। এখন শুধু পানি, হাঁটা আর পরের meal-এর balance ঠিক রাখলেই দিনটা সুন্দর যাবে।';
   }
 }
 
@@ -426,7 +426,7 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text('à¦‡à¦¨à§à¦Ÿà¦¾à¦°à¦®à¦¿à¦Ÿà§‡à¦¨à§à¦Ÿ à¦«à¦¾à¦¸à§à¦Ÿà¦¿à¦‚', style: AppTextStyles.cardTitle),
+                child: Text('ইন্টারমিটেন্ট ফাস্টিং', style: AppTextStyles.cardTitle),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -435,7 +435,7 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  settings.fastingEnabled ? 'à¦šà¦¾à¦²à§' : 'à¦¬à¦¨à§à¦§',
+                  settings.fastingEnabled ? 'চালু' : 'বন্ধ',
                   style: AppTextStyles.caption.copyWith(
                     color: settings.fastingEnabled ? AppColors.primary : AppColors.textMuted,
                     fontWeight: FontWeight.w700,
@@ -448,7 +448,7 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
           if (!settings.fastingEnabled || startedAt == null) ...[
           ] else ...[
             Text(
-              'à¦¶à§à¦°à§: ${_formatDateTime(startedAt)}',
+              'শুরু: ${_formatDateTime(startedAt)}',
               style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 8),
@@ -456,14 +456,14 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
               children: [
                 Expanded(
                   child: _FastingMetric(
-                    title: 'à¦ªà§‡à¦°à¦¿à§Ÿà§‡à¦›à§‡',
+                    title: 'পেরিয়েছে',
                     value: _formatDuration(safeElapsed),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: _FastingMetric(
-                    title: 'à¦¬à¦¾à¦•à¦¿ à¦†à¦›à§‡',
+                    title: 'বাকি আছে',
                     value: _formatDuration(remaining),
                     highlighted: true,
                   ),
@@ -487,13 +487,13 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _setStartedAt(DateTime.now()),
-                  child: const Text('à¦à¦–à¦¨ à¦¶à§à¦°à§'),
+                child: const Text('এখন শুরু'),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: PrimaryButton(
-                  label: 'à¦¸à¦®à§Ÿ à¦ à¦¿à¦• à¦•à¦°à§à¦¨',
+              label: 'সময় ঠিক করুন',
                   onPressed: _pickCustomStart,
                   height: 46,
                   icon: Icons.schedule_rounded,
@@ -507,7 +507,7 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _pickWindow,
-                  child: Text('${BengaliFormatters.toBengaliNumber(settings.fastingWindowHours)} à¦˜à¦£à§à¦Ÿà¦¾à¦° à¦‰à¦‡à¦¨à§à¦¡à§‹'),
+              child: Text('${BengaliFormatters.toBengaliNumber(settings.fastingWindowHours)} ঘণ্টার উইন্ডো'),
                 ),
               ),
               const SizedBox(width: 10),
@@ -521,7 +521,7 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
                           ),
                         );
                   },
-                  child: const Text('à¦¬à¦¨à§à¦§ à¦•à¦°à§à¦¨'),
+                child: const Text('বন্ধ করুন'),
                 ),
               ),
             ],
@@ -591,16 +591,16 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('à¦«à¦¾à¦¸à§à¦Ÿà¦¿à¦‚ à¦¸à¦®à§Ÿ à¦ à¦¿à¦• à¦•à¦°à§à¦¨', style: AppTextStyles.cardTitle),
+            Text('ফাস্টিং সময় ঠিক করুন', style: AppTextStyles.cardTitle),
             const SizedBox(height: 12),
             TextField(
               controller: controller,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: 'à¦¯à§‡à¦®à¦¨ à§§à§¨, à§§à§ª, à§§à§¬'),
+              decoration: const InputDecoration(hintText: 'যেমন ১২, ১৪, ১৬'),
             ),
             const SizedBox(height: 12),
             PrimaryButton(
-              label: 'à¦¸à¦‚à¦°à¦•à§à¦·à¦£ à¦•à¦°à§à¦¨',
+              label: 'সংরক্ষণ করুন',
               onPressed: () async {
                 final value = int.tryParse(controller.text.trim());
                 if (value == null) {
@@ -631,9 +631,9 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
     final hours = duration.inHours;
     final minutes = duration.inMinutes.remainder(60);
     if (hours <= 0) {
-      return '${BengaliFormatters.toBengaliNumber(minutes)} à¦®à¦¿à¦¨à¦¿à¦Ÿ';
+      return '${BengaliFormatters.toBengaliNumber(minutes)} মিনিট';
     }
-    return '${BengaliFormatters.toBengaliNumber(hours)} à¦˜ ${BengaliFormatters.toBengaliNumber(minutes)} à¦®à¦¿';
+    return '${BengaliFormatters.toBengaliNumber(hours)} ঘ ${BengaliFormatters.toBengaliNumber(minutes)} মি';
   }
 }
 
@@ -788,7 +788,7 @@ class _MealSlotRow extends StatelessWidget {
                 Text(slot.labelBn, style: AppTextStyles.bodyLarge),
                 const SizedBox(height: 4),
                 Text(
-                  hasMeal ? meal!.foodName : '???? ???? ??? ??? ????',
+                  hasMeal ? meal!.foodName : 'এখনো কোনো খাবার যোগ করা হয়নি',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: AppTextStyles.body.copyWith(
@@ -870,12 +870,12 @@ class _WaterTrackerCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              Text('à¦ªà¦¾à¦¨à¦¿', style: AppTextStyles.bodyLarge),
+              Text('পানি', style: AppTextStyles.bodyLarge),
               const Spacer(),
               Text(
                 water == 0
-                    ? 'à¦ªà¦¾à¦¨à¦¿ à¦ªà¦¾à¦¨ à¦¶à§à¦°à§ à¦•à¦°à§à¦¨ ðŸ’§'
-                    : 'à¦†à¦œ ${BengaliFormatters.toBengaliNumber(water)}/à§® à¦—à§à¦²à¦¾à¦¸ â€¢ à¦†à¦°à¦“ ${BengaliFormatters.toBengaliNumber(waterRemaining)} à¦¬à¦¾à¦•à¦¿',
+                    ? 'পানি পান শুরু করুন 💧'
+                    : 'আজ ${BengaliFormatters.toBengaliNumber(water)}/৮ গ্লাস • আরও ${BengaliFormatters.toBengaliNumber(waterRemaining)} বাকি',
                 style: AppTextStyles.caption.copyWith(
                   color: water == 0 ? AppColors.textMuted : AppColors.primary,
                   fontWeight: FontWeight.w700,
@@ -929,8 +929,8 @@ class _WaterTrackerCard extends ConsumerWidget {
           const SizedBox(height: 12),
           Text(
             water >= 7
-                ? 'à¦¦à§ˆà¦¨à¦¿à¦• à§­â€“à§® à¦—à§à¦²à¦¾à¦¸ à¦ªà¦¾à¦¨à¦¿ à¦•à¦¿à¦¡à¦¨à¦¿, à¦¹à¦œà¦® à¦†à¦° à¦¶à¦°à§€à¦°à§‡à¦° à¦¸à§à¦¬à¦¾à¦­à¦¾à¦¬à¦¿à¦• à¦­à¦¾à¦°à¦¸à¦¾à¦®à§à¦¯ à¦­à¦¾à¦²à§‹ à¦°à¦¾à¦–à¦¤à§‡ à¦¸à¦¾à¦¹à¦¾à¦¯à§à¦¯ à¦•à¦°à§‡à¥¤'
-                : 'à¦ªà§à¦°à¦¤à¦¿à¦¦à¦¿à¦¨ à¦¨à¦¿à§Ÿà¦®à¦¿à¦¤ à¦ªà¦¾à¦¨à¦¿ à¦–à§‡à¦²à§‡ à¦•à¦¿à¦¡à¦¨à¦¿, à¦¹à¦œà¦® à¦†à¦° à¦¶à¦°à§€à¦°à§‡à¦° à¦à¦¨à¦¾à¦°à§à¦œà¦¿ à¦­à¦¾à¦²à§‹ à¦¥à¦¾à¦•à§‡à¥¤',
+                ? 'দৈনিক ৭–৮ গ্লাস পানি কিডনি, হজম আর শরীরের স্বাভাবিক ভারসাম্য ভালো রাখতে সাহায্য করে।'
+                : 'প্রতিদিন নিয়মিত পানি খেলে কিডনি, হজম আর শরীরের এনার্জি ভালো থাকে।',
             style: AppTextStyles.caption.copyWith(
               color: AppColors.textSecondary,
               height: 1.45,
@@ -974,7 +974,7 @@ class _AchievementCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Text('à¦à¦‡ à¦¸à¦ªà§à¦¤à¦¾à¦¹à§‡à¦° à¦…à¦—à§à¦°à¦—à¦¤à¦¿', style: AppTextStyles.cardTitle),
+              Text('এই সপ্তাহের অগ্রগতি', style: AppTextStyles.cardTitle),
               const Spacer(),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -983,7 +983,7 @@ class _AchievementCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
-                  '${BengaliFormatters.toBengaliNumber(snapshot.activeDays)} à¦¦à¦¿à¦¨ active',
+                  '${BengaliFormatters.toBengaliNumber(snapshot.activeDays)} দিন active',
                   style: AppTextStyles.caption.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.w700,
@@ -1044,7 +1044,7 @@ class _OfflineQueueCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: Text(
-              '$countà¦Ÿà¦¿ offline log sync-à¦à¦° à¦…à¦ªà§‡à¦•à§à¦·à¦¾à§Ÿ à¦†à¦›à§‡à¥¤ à¦‡à¦¨à§à¦Ÿà¦¾à¦°à¦¨à§‡à¦Ÿ à¦à¦²à§‡à¦‡ à¦à¦—à§à¦²à§‹ à¦¨à¦¿à¦œà§‡ à¦¥à§‡à¦•à§‡à¦‡ update à¦¹à¦¬à§‡à¥¤',
+              '$countটি offline log sync-এর অপেক্ষায় আছে। ইন্টারনেট এলেই এগুলো নিজে থেকেই update হবে।',
               style: AppTextStyles.body.copyWith(color: AppColors.textPrimary),
             ),
           ),

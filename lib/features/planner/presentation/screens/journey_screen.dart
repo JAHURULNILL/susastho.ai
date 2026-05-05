@@ -1,4 +1,4 @@
-// ignore_for_file: unnecessary_null_comparison
+// ignore_for_file: unnecessary_null_comparison, unused_element
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -16,10 +16,103 @@ import '../../../../data/models/wellness_routine.dart';
 import '../../../../data/models/wellness_snapshot.dart';
 import '../../../../shared/providers/app_state_provider.dart';
 import '../../../home/providers/home_provider.dart';
+import '../widgets/wellness_section.dart';
 import '../../providers/planner_provider.dart';
 
-class JourneyScreen extends ConsumerWidget {
+class JourneyScreen extends ConsumerStatefulWidget {
   const JourneyScreen({super.key});
+
+  @override
+  ConsumerState<JourneyScreen> createState() => _JourneyScreenState();
+}
+
+class _JourneyScreenState extends ConsumerState<JourneyScreen> {
+  _JourneyTab _selectedTab = _JourneyTab.weekly;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.screenPadding,
+            20,
+            AppSpacing.screenPadding,
+            0,
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _JourneyTabChip(
+                  label: 'সাপ্তাহিক',
+                  selected: _selectedTab == _JourneyTab.weekly,
+                  onTap: () => setState(() => _selectedTab = _JourneyTab.weekly),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _JourneyTabChip(
+                  label: 'সুস্থতা',
+                  selected: _selectedTab == _JourneyTab.wellness,
+                  onTap: () => setState(() => _selectedTab = _JourneyTab.wellness),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _selectedTab == _JourneyTab.weekly
+              ? const _JourneyWeeklyTab()
+              : const JourneyWellnessSection(),
+        ),
+      ],
+    );
+  }
+}
+
+enum _JourneyTab { weekly, wellness }
+
+class _JourneyTabChip extends StatelessWidget {
+  const _JourneyTabChip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.primary : AppColors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected ? AppColors.primary : AppColors.border,
+          ),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          label,
+          style: AppTextStyles.bodyLarge.copyWith(
+            color: selected ? AppColors.white : AppColors.textPrimary,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _JourneyWeeklyTab extends ConsumerWidget {
+  const _JourneyWeeklyTab();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -29,7 +122,9 @@ class JourneyScreen extends ConsumerWidget {
     final profile = ref.watch(userProfileProvider).asData?.value;
     final weightHistory = ref.watch(weightHistoryProvider).asData?.value ?? const <WeightHistoryEntry>[];
     final wellness = ref.watch(wellnessSnapshotProvider).asData?.value;
-    final wellnessPlan = ref.watch(wellnessRoutineProvider).asData?.value;
+    final previousWeeklyCalories = ref.watch(previousWeeklyCaloriesProvider).asData?.value ?? const <String, double>{};
+    final previousWeeklySteps = ref.watch(previousWeeklyStepsProvider).asData?.value ?? const <String, int>{};
+    final previousWeeklySleep = ref.watch(previousWeeklySleepProvider).asData?.value ?? const <String, double>{};
     final summary = dashboard?.summary;
     final dailyGoal = profile?.dailyCalorieTarget ?? 0;
     final avgCalories = _averageWeeklyCalories(weeklyCalories);
@@ -81,16 +176,18 @@ class JourneyScreen extends ConsumerWidget {
           ),
         ],
       ),
+      _WeekComparisonCard(
+        currentCalories: weeklyCalories,
+        previousCalories: previousWeeklyCalories,
+        currentSteps: ref.watch(weeklyStepsProvider).asData?.value ?? const <String, int>{},
+        previousSteps: previousWeeklySteps,
+        currentSleep: ref.watch(weeklySleepProvider).asData?.value ?? const <String, double>{},
+        previousSleep: previousWeeklySleep,
+      ),
       _WeeklyCaloriesChart(
         weekData: _buildWeekBars(weeklyCalories),
         dailyGoal: dailyGoal.toDouble(),
       ),
-      if (wellnessPlan != null) _WellnessOverviewCard(plan: wellnessPlan),
-      if (wellnessPlan != null)
-        _WellnessSystemSection(
-          plan: wellnessPlan,
-          onToggle: (type) => ref.read(wellnessRoutineProvider.notifier).toggle(type),
-        ),
       _WeightTrendCard(entries: weightHistory),
       _HealthGoalProgress(
         profile: profile,
@@ -167,8 +264,8 @@ class JourneyScreen extends ConsumerWidget {
         ? 'লক্ষ্য পূরণের হার এখনো তৈরি হয়নি।'
         : 'লক্ষ্য পূরণের হার ${BengaliFormatters.toBengaliNumber(goalPercent)}%।';
     final workoutPart = workoutCount == 0
-        ? 'ব্যায়াম routine এখনো শুরু হয়নি।'
-        : '${BengaliFormatters.toBengaliNumber(workoutCount)}টি exercise entry completed হয়েছে।';
+        ? 'ব্যায়াম রুটিন এখনো শুরু হয়নি।'
+        : '${BengaliFormatters.toBengaliNumber(workoutCount)}টি ব্যায়াম সম্পন্ন হয়েছে।';
     final streakPart = wellness == null || wellness.calorieStreakDays == 0
         ? 'এখনো streak তৈরি হয়নি।'
         : '${BengaliFormatters.toBengaliNumber(wellness.calorieStreakDays)} দিনের ক্যালরি স্ট্রিক চলছে।';
@@ -226,6 +323,130 @@ class _JourneyStat extends StatelessWidget {
           Text(value, style: AppTextStyles.metricSmall),
         ],
       ),
+    );
+  }
+}
+
+class _WeekComparisonCard extends StatelessWidget {
+  const _WeekComparisonCard({
+    required this.currentCalories,
+    required this.previousCalories,
+    required this.currentSteps,
+    required this.previousSteps,
+    required this.currentSleep,
+    required this.previousSleep,
+  });
+
+  final Map<String, double> currentCalories;
+  final Map<String, double> previousCalories;
+  final Map<String, int> currentSteps;
+  final Map<String, int> previousSteps;
+  final Map<String, double> currentSleep;
+  final Map<String, double> previousSleep;
+
+  @override
+  Widget build(BuildContext context) {
+    final calorieText = _comparisonText(
+      _averageDouble(currentCalories.values),
+      _averageDouble(previousCalories.values),
+      suffix: 'kcal',
+    );
+    final stepText = _comparisonText(
+      _averageInt(currentSteps.values),
+      _averageInt(previousSteps.values),
+      suffix: 'স্টেপ',
+    );
+    final sleepText = _comparisonText(
+      _averageDouble(currentSleep.values),
+      _averageDouble(previousSleep.values),
+      suffix: 'ঘণ্টা',
+      digits: 1,
+    );
+
+    return InfoCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('গত সপ্তাহ বনাম এই সপ্তাহ', style: AppTextStyles.cardTitle),
+          const SizedBox(height: 12),
+          _ComparisonRow(label: 'ক্যালরি', value: calorieText),
+          const SizedBox(height: 10),
+          _ComparisonRow(label: 'হাঁটা', value: stepText),
+          const SizedBox(height: 10),
+          _ComparisonRow(label: 'ঘুম', value: sleepText),
+        ],
+      ),
+    );
+  }
+
+  String _comparisonText(
+    num? current,
+    num? previous, {
+    required String suffix,
+    int digits = 0,
+  }) {
+    if (current == null && previous == null) {
+      return '—';
+    }
+    if (current != null && previous == null) {
+      return '${_bn(current, digits)} $suffix • নতুন শুরু';
+    }
+    if (current == null && previous != null) {
+      return '—';
+    }
+    final currentValue = current!;
+    final previousValue = previous!;
+    final diff = currentValue - previousValue;
+    final tone = diff == 0 ? 'একই আছে' : diff > 0 ? 'বেড়েছে' : 'কমেছে';
+    return '${_bn(currentValue, digits)} $suffix • ${_bn(diff.abs(), digits)} $tone';
+  }
+
+  String _bn(num value, int digits) {
+    return BengaliFormatters.toBengaliNumber(
+      digits == 0 ? value.round() : value,
+      fractionDigits: digits,
+    );
+  }
+
+  double? _averageDouble(Iterable<num> values) {
+    final items = values.where((value) => value > 0).toList();
+    if (items.isEmpty) {
+      return null;
+    }
+    return items.fold<double>(0, (sum, value) => sum + value.toDouble()) / items.length;
+  }
+
+  int? _averageInt(Iterable<int> values) {
+    final items = values.where((value) => value > 0).toList();
+    if (items.isEmpty) {
+      return null;
+    }
+    return (items.reduce((a, b) => a + b) / items.length).round();
+  }
+}
+
+class _ComparisonRow extends StatelessWidget {
+  const _ComparisonRow({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(child: Text(label, style: AppTextStyles.bodyLarge)),
+        Text(
+          value,
+          style: AppTextStyles.caption.copyWith(
+            color: AppColors.primary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -484,7 +705,7 @@ class _WellnessOverviewCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             remaining <= 0
-                ? 'নতুন ব্যাজ unlocked হয়েছে।'
+                ? 'নতুন ব্যাজ আনলক হয়েছে।'
                 : 'আর $remaining পয়েন্ট হলে পরের ব্যাজ পাবেন।',
             style: AppTextStyles.caption.copyWith(color: AppColors.primary),
           ),
@@ -511,7 +732,7 @@ class _WellnessSystemSection extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Wellness System', style: AppTextStyles.cardTitle),
+              Text('ওয়েলনেস সিস্টেম', style: AppTextStyles.cardTitle),
               const SizedBox(height: 14),
               GridView.builder(
                 shrinkWrap: true,
@@ -703,7 +924,7 @@ class _WellnessTaskRow extends StatelessWidget {
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
-                      '${entry.streakDays} দিন streak',
+                  '${entry.streakDays} দিন স্ট্রিক',
                       style: AppTextStyles.caption.copyWith(
                         color: AppColors.amber,
                         fontWeight: FontWeight.w700,

@@ -1,52 +1,310 @@
+// ignore_for_file: unnecessary_brace_in_string_interps
+
 enum WellnessRoutineType {
   breathing,
-  pelvicFloor,
+  kegel,
   meditation,
-  habitControl,
+  nofap,
+  sleep,
+  coldshower,
 }
 
 extension WellnessRoutineTypeX on WellnessRoutineType {
   String get key => switch (this) {
         WellnessRoutineType.breathing => 'breathing',
-        WellnessRoutineType.pelvicFloor => 'pelvicFloor',
+        WellnessRoutineType.kegel => 'kegel',
         WellnessRoutineType.meditation => 'meditation',
-        WellnessRoutineType.habitControl => 'habitControl',
+        WellnessRoutineType.nofap => 'nofap',
+        WellnessRoutineType.sleep => 'sleep',
+        WellnessRoutineType.coldshower => 'coldshower',
       };
 
   String get labelBn => switch (this) {
-        WellnessRoutineType.breathing => 'Breathing',
-        WellnessRoutineType.pelvicFloor => 'Pelvic Floor',
-        WellnessRoutineType.meditation => 'Meditation',
-        WellnessRoutineType.habitControl => 'Habit Control',
+        WellnessRoutineType.breathing => 'শ্বাস-প্রশ্বাস',
+        WellnessRoutineType.kegel => 'কেগেল ব্যায়াম',
+        WellnessRoutineType.meditation => 'মেডিটেশন',
+        WellnessRoutineType.nofap => 'No Fap',
+        WellnessRoutineType.sleep => 'ঘুমের রুটিন',
+        WellnessRoutineType.coldshower => 'ঠান্ডা গোসল',
       };
 
   String get subtitleBn => switch (this) {
-        WellnessRoutineType.breathing => 'শ্বাস-প্রশ্বাস ঠিক রাখুন',
-        WellnessRoutineType.pelvicFloor => 'পেলভিক কন্ট্রোল শক্তিশালী করুন',
-        WellnessRoutineType.meditation => 'মনকে শান্ত রাখুন',
-        WellnessRoutineType.habitControl => 'নিজের উপর নিয়ন্ত্রণ গড়ুন',
-      };
-
-  String get benefitBn => switch (this) {
-        WellnessRoutineType.breathing => 'স্ট্রেস কমাতে আর মন পরিষ্কার রাখতে সাহায্য করে।',
-        WellnessRoutineType.pelvicFloor => 'পেলভিক স্বাস্থ্য, bladder control আর core support-এ সাহায্য করে।',
-        WellnessRoutineType.meditation => 'মানসিক চাপ কমিয়ে ঘুম ও ফোকাস উন্নত করতে সাহায্য করে।',
-        WellnessRoutineType.habitControl => 'দৈনিক self-discipline বজায় রাখতে আর relapse কমাতে সহায়তা করে।',
+        WellnessRoutineType.breathing => 'সকালের শ্বাসে ফোকাস আনুন',
+        WellnessRoutineType.kegel => 'Pelvic floor শক্তিশালী রাখুন',
+        WellnessRoutineType.meditation => 'মনের চাপ নামিয়ে আনুন',
+        WellnessRoutineType.nofap => 'Self-control ধারাবাহিক রাখুন',
+        WellnessRoutineType.sleep => 'রাতের recovery ঠিক রাখুন',
+        WellnessRoutineType.coldshower => 'শরীরকে fresh reset দিন',
       };
 
   String get iconEmoji => switch (this) {
         WellnessRoutineType.breathing => '🌬️',
-        WellnessRoutineType.pelvicFloor => '🧘',
-        WellnessRoutineType.meditation => '🕯️',
-        WellnessRoutineType.habitControl => '🛡️',
+        WellnessRoutineType.kegel => '💪',
+        WellnessRoutineType.meditation => '🧘',
+        WellnessRoutineType.nofap => '🔒',
+        WellnessRoutineType.sleep => '🌙',
+        WellnessRoutineType.coldshower => '🚿',
       };
 
   static WellnessRoutineType fromKey(String key) => switch (key) {
-        'pelvicFloor' => WellnessRoutineType.pelvicFloor,
+        'kegel' => WellnessRoutineType.kegel,
         'meditation' => WellnessRoutineType.meditation,
-        'habitControl' => WellnessRoutineType.habitControl,
+        'nofap' => WellnessRoutineType.nofap,
+        'sleep' => WellnessRoutineType.sleep,
+        'coldshower' => WellnessRoutineType.coldshower,
         _ => WellnessRoutineType.breathing,
       };
+}
+
+class WellnessCompletionLog {
+  const WellnessCompletionLog({
+    required this.userId,
+    required this.moduleId,
+    required this.date,
+    required this.completedAt,
+    required this.duration,
+    required this.details,
+  });
+
+  final String userId;
+  final WellnessRoutineType moduleId;
+  final String date;
+  final DateTime completedAt;
+  final int duration;
+  final Map<String, dynamic> details;
+
+  factory WellnessCompletionLog.fromJson(Map<String, dynamic> json) {
+    return WellnessCompletionLog(
+      userId: json['userId'] as String? ?? '',
+      moduleId: WellnessRoutineTypeX.fromKey(json['moduleId'] as String? ?? ''),
+      date: json['date'] as String? ?? '',
+      completedAt: DateTime.tryParse(json['completedAt'] as String? ?? '') ?? DateTime.now(),
+      duration: (json['duration'] as num?)?.toInt() ?? 0,
+      details: Map<String, dynamic>.from(json['details'] as Map? ?? const {}),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'moduleId': moduleId.key,
+      'date': date,
+      'completedAt': completedAt.toIso8601String(),
+      'duration': duration,
+      'details': details,
+    };
+  }
+}
+
+class WellnessStreakRecord {
+  const WellnessStreakRecord({
+    required this.userId,
+    required this.moduleId,
+    required this.currentStreak,
+    required this.longestStreak,
+    required this.lastCompletedDate,
+    required this.totalSessions,
+    required this.startedAt,
+  });
+
+  final String userId;
+  final WellnessRoutineType moduleId;
+  final int currentStreak;
+  final int longestStreak;
+  final String lastCompletedDate;
+  final int totalSessions;
+  final DateTime startedAt;
+
+  factory WellnessStreakRecord.fromJson(Map<String, dynamic> json) {
+    return WellnessStreakRecord(
+      userId: json['userId'] as String? ?? '',
+      moduleId: WellnessRoutineTypeX.fromKey(json['moduleId'] as String? ?? ''),
+      currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
+      longestStreak: (json['longestStreak'] as num?)?.toInt() ?? 0,
+      lastCompletedDate: json['lastCompletedDate'] as String? ?? '',
+      totalSessions: (json['totalSessions'] as num?)?.toInt() ?? 0,
+      startedAt: DateTime.tryParse(json['startedAt'] as String? ?? '') ?? DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'moduleId': moduleId.key,
+      'currentStreak': currentStreak,
+      'longestStreak': longestStreak,
+      'lastCompletedDate': lastCompletedDate,
+      'totalSessions': totalSessions,
+      'startedAt': startedAt.toIso8601String(),
+    };
+  }
+}
+
+class NofapTrackerRecord {
+  const NofapTrackerRecord({
+    required this.userId,
+    required this.currentStreak,
+    required this.longestStreak,
+    required this.startDate,
+    required this.lastResetDate,
+    required this.totalResets,
+  });
+
+  final String userId;
+  final int currentStreak;
+  final int longestStreak;
+  final String startDate;
+  final String lastResetDate;
+  final int totalResets;
+
+  factory NofapTrackerRecord.fromJson(Map<String, dynamic> json) {
+    return NofapTrackerRecord(
+      userId: json['userId'] as String? ?? '',
+      currentStreak: (json['currentStreak'] as num?)?.toInt() ?? 0,
+      longestStreak: (json['longestStreak'] as num?)?.toInt() ?? 0,
+      startDate: json['startDate'] as String? ?? '',
+      lastResetDate: json['lastResetDate'] as String? ?? '',
+      totalResets: (json['totalResets'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'userId': userId,
+      'currentStreak': currentStreak,
+      'longestStreak': longestStreak,
+      'startDate': startDate,
+      'lastResetDate': lastResetDate,
+      'totalResets': totalResets,
+    };
+  }
+}
+
+class WellnessRoutinePlan {
+  const WellnessRoutinePlan({
+    required this.dateKey,
+    required this.streaks,
+    required this.todayLogs,
+    required this.weekLogs,
+    required this.nofapTracker,
+    required this.dailyBenefit,
+    required this.isLoadingBenefit,
+  });
+
+  final String dateKey;
+  final Map<WellnessRoutineType, WellnessStreakRecord> streaks;
+  final Set<String> todayLogs;
+  final Map<String, Set<String>> weekLogs;
+  final NofapTrackerRecord? nofapTracker;
+  final String dailyBenefit;
+  final bool isLoadingBenefit;
+
+  int get nofapStreak => nofapTracker?.currentStreak ?? 0;
+  int get doneTodayCount => todayLogs.length;
+  int get totalModules => WellnessRoutineType.values.length;
+  int get totalPoints => totalModules * 10;
+  int get earnedPoints => doneTodayCount * 10;
+  int get totalScore => totalStreak * 10;
+  int get badgesEarned => totalScore ~/ 100;
+  double get progressRatio => totalModules == 0 ? 0 : doneTodayCount / totalModules;
+
+  String get progressMessage {
+    if (doneTodayCount == 0) {
+      return 'আজ একটি ছোট wellness অভ্যাস দিয়েই শুরু করুন।';
+    }
+    if (doneTodayCount >= totalModules) {
+      return 'দারুণ। আজকের সব wellness module সম্পন্ন হয়েছে।';
+    }
+    return 'আজ ${doneTodayCount}/${totalModules} module শেষ হয়েছে। ধারাবাহিকতা ধরে রাখুন।';
+  }
+
+  int get totalStreak {
+    var total = nofapStreak;
+    for (final entry in streaks.entries) {
+      if (entry.key == WellnessRoutineType.nofap) {
+        continue;
+      }
+      total += entry.value.currentStreak;
+    }
+    return total;
+  }
+
+  int streakFor(WellnessRoutineType type) {
+    if (type == WellnessRoutineType.nofap) {
+      return nofapStreak;
+    }
+    return streaks[type]?.currentStreak ?? 0;
+  }
+
+  bool isDoneToday(WellnessRoutineType type) => todayLogs.contains(type.key);
+
+  bool wasDoneOn(WellnessRoutineType type, String dateKey) {
+    return weekLogs[dateKey]?.contains(type.key) ?? false;
+  }
+
+  WellnessRoutinePlan copyWith({
+    Map<WellnessRoutineType, WellnessStreakRecord>? streaks,
+    Set<String>? todayLogs,
+    Map<String, Set<String>>? weekLogs,
+    NofapTrackerRecord? nofapTracker,
+    String? dailyBenefit,
+    bool? isLoadingBenefit,
+    bool clearNofapTracker = false,
+  }) {
+    return WellnessRoutinePlan(
+      dateKey: dateKey,
+      streaks: streaks ?? this.streaks,
+      todayLogs: todayLogs ?? this.todayLogs,
+      weekLogs: weekLogs ?? this.weekLogs,
+      nofapTracker: clearNofapTracker ? null : nofapTracker ?? this.nofapTracker,
+      dailyBenefit: dailyBenefit ?? this.dailyBenefit,
+      isLoadingBenefit: isLoadingBenefit ?? this.isLoadingBenefit,
+    );
+  }
+
+  List<WellnessRoutineEntry> get entries {
+    return WellnessRoutineType.values.map((type) {
+      final minutes = switch (type) {
+        WellnessRoutineType.breathing => 5,
+        WellnessRoutineType.kegel => 8,
+        WellnessRoutineType.meditation => 10,
+        WellnessRoutineType.nofap => 0,
+        WellnessRoutineType.sleep => 10,
+        WellnessRoutineType.coldshower => 3,
+      };
+      final title = switch (type) {
+        WellnessRoutineType.breathing => 'Breathing session',
+        WellnessRoutineType.kegel => 'Kegel session',
+        WellnessRoutineType.meditation => 'Meditation session',
+        WellnessRoutineType.nofap => 'No Fap check-in',
+        WellnessRoutineType.sleep => 'Sleep routine',
+        WellnessRoutineType.coldshower => 'Cold shower',
+      };
+      return WellnessRoutineEntry(
+        type: type,
+        timeLabel: type == WellnessRoutineType.sleep ? 'রাত' : 'আজ',
+        title: title,
+        instructions: type.subtitleBn,
+        benefit: type.subtitleBn,
+        minutes: minutes,
+        points: 10,
+        completed: isDoneToday(type),
+        streakDays: streakFor(type),
+      );
+    }).toList();
+  }
+
+  factory WellnessRoutinePlan.empty(String dateKey) {
+    return WellnessRoutinePlan(
+      dateKey: dateKey,
+      streaks: const {},
+      todayLogs: const <String>{},
+      weekLogs: const {},
+      nofapTracker: null,
+      dailyBenefit: '',
+      isLoadingBenefit: true,
+    );
+  }
 }
 
 class WellnessRoutineEntry {
@@ -71,115 +329,4 @@ class WellnessRoutineEntry {
   final int points;
   final bool completed;
   final int streakDays;
-
-  WellnessRoutineEntry copyWith({
-    bool? completed,
-    int? streakDays,
-  }) {
-    return WellnessRoutineEntry(
-      type: type,
-      timeLabel: timeLabel,
-      title: title,
-      instructions: instructions,
-      benefit: benefit,
-      minutes: minutes,
-      points: points,
-      completed: completed ?? this.completed,
-      streakDays: streakDays ?? this.streakDays,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'type': type.key,
-      'timeLabel': timeLabel,
-      'title': title,
-      'instructions': instructions,
-      'benefit': benefit,
-      'minutes': minutes,
-      'points': points,
-      'completed': completed,
-      'streakDays': streakDays,
-    };
-  }
-
-  factory WellnessRoutineEntry.fromJson(Map<String, dynamic> json) {
-    return WellnessRoutineEntry(
-      type: WellnessRoutineTypeX.fromKey(json['type'] as String? ?? 'breathing'),
-      timeLabel: json['timeLabel'] as String? ?? '',
-      title: json['title'] as String? ?? '',
-      instructions: json['instructions'] as String? ?? '',
-      benefit: json['benefit'] as String? ?? '',
-      minutes: (json['minutes'] as num?)?.toInt() ?? 0,
-      points: (json['points'] as num?)?.toInt() ?? 10,
-      completed: json['completed'] as bool? ?? false,
-      streakDays: (json['streakDays'] as num?)?.toInt() ?? 0,
-    );
-  }
-}
-
-class WellnessRoutinePlan {
-  const WellnessRoutinePlan({
-    required this.dateKey,
-    required this.entries,
-    required this.totalPoints,
-    required this.earnedPoints,
-    required this.totalScore,
-    required this.badgesEarned,
-    required this.progressMessage,
-  });
-
-  final String dateKey;
-  final List<WellnessRoutineEntry> entries;
-  final int totalPoints;
-  final int earnedPoints;
-  final int totalScore;
-  final int badgesEarned;
-  final String progressMessage;
-
-  double get progressRatio => totalPoints == 0 ? 0 : earnedPoints / totalPoints;
-
-  WellnessRoutinePlan copyWith({
-    List<WellnessRoutineEntry>? entries,
-    int? earnedPoints,
-    int? totalScore,
-    int? badgesEarned,
-    String? progressMessage,
-  }) {
-    return WellnessRoutinePlan(
-      dateKey: dateKey,
-      entries: entries ?? this.entries,
-      totalPoints: totalPoints,
-      earnedPoints: earnedPoints ?? this.earnedPoints,
-      totalScore: totalScore ?? this.totalScore,
-      badgesEarned: badgesEarned ?? this.badgesEarned,
-      progressMessage: progressMessage ?? this.progressMessage,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'dateKey': dateKey,
-      'entries': entries.map((item) => item.toJson()).toList(),
-      'totalPoints': totalPoints,
-      'earnedPoints': earnedPoints,
-      'totalScore': totalScore,
-      'badgesEarned': badgesEarned,
-      'progressMessage': progressMessage,
-    };
-  }
-
-  factory WellnessRoutinePlan.fromJson(Map<String, dynamic> json) {
-    return WellnessRoutinePlan(
-      dateKey: json['dateKey'] as String? ?? '',
-      entries: ((json['entries'] as List<dynamic>?) ?? const [])
-          .map((item) => WellnessRoutineEntry.fromJson(Map<String, dynamic>.from(item as Map)))
-          .toList(),
-      totalPoints: (json['totalPoints'] as num?)?.toInt() ?? 40,
-      earnedPoints: (json['earnedPoints'] as num?)?.toInt() ?? 0,
-      totalScore: (json['totalScore'] as num?)?.toInt() ?? 0,
-      badgesEarned: (json['badgesEarned'] as num?)?.toInt() ?? 0,
-      progressMessage: json['progressMessage'] as String? ?? '',
-    );
-  }
 }
