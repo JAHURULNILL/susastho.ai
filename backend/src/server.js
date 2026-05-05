@@ -318,7 +318,10 @@ app.post('/api/wellness/streak', async (req, res) => {
   } catch (e) { res.status(500).json({ error: errStr(e) }); }
 });
 
-// ─── Start server ────────────────────────────────────────────────
-app.listen(port, () => {
-  console.log(`Sushastho.ai backend listening on http://localhost:${port}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(port, () => {
+    console.log(`Sushastho.ai backend listening on http://localhost:${port}`);
+  });
+}
+
+export default app;
