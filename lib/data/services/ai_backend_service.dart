@@ -22,7 +22,7 @@ class AiBackendService {
 
   String get _resolvedBaseUrl {
     if (_baseUrl.isEmpty) {
-      throw Exception('BACKEND_BASE_URL is missing');
+      return 'https://susastho-ai.vercel.app';
     }
     return _baseUrl;
   }
