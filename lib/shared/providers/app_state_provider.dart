@@ -128,13 +128,9 @@ final healthMetricsRepositoryProvider = Provider<HealthMetricsRepository>((ref) 
 });
 
 final activityTrackingServiceProvider = Provider<ActivityTrackingService>((ref) {
-  final storage = ref.watch(localStorageServiceProvider);
   final repository = ref.watch(healthMetricsRepositoryProvider);
-  final healthSyncService = ref.watch(healthSyncServiceProvider);
   final service = ActivityTrackingService(
-    storage: storage,
     healthMetricsRepository: repository,
-    healthSyncService: healthSyncService,
   );
   ref.onDispose(() {
     service.dispose();
