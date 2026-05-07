@@ -87,17 +87,24 @@ class FoodAnalysisResult {
   final String? modelName;
   final String? modelVersion;
 
+  static List<String> _parseList(dynamic value) {
+    if (value == null) return const [];
+    if (value is List) {
+      return value.map((e) => e.toString()).toList();
+    }
+    // Handle single string or other types gracefully
+    final str = value.toString().trim();
+    if (str.isEmpty || str == '[]' || str == 'null') return const [];
+    return [str];
+  }
+
   factory FoodAnalysisResult.fromJson(Map<String, dynamic> json) {
     final model = json['model'] as Map<String, dynamic>?;
     return FoodAnalysisResult(
       foodName: json['foodName'] as String? ?? json['name'] as String? ?? 'অজানা খাবার',
       macros: NutritionMacro.fromJson(json['macros'] as Map<String, dynamic>? ?? json),
-      pros: ((json['pros'] as List<dynamic>?) ?? json['benefits'] as List<dynamic>? ?? [])
-          .map((e) => e.toString())
-          .toList(),
-      warnings: ((json['warnings'] as List<dynamic>?) ?? json['harms'] as List<dynamic>? ?? [])
-          .map((e) => e.toString())
-          .toList(),
+      pros: _parseList(json['pros'] ?? json['benefits']),
+      warnings: _parseList(json['warnings'] ?? json['harms']),
       summary: json['summary'] as String? ?? json['score_reason'] as String? ?? '',
       healthScore: (json['healthScore'] as num?)?.toInt() ?? (json['score'] as num?)?.toInt() ?? 50,
       conditionAdvice: json['conditionAdvice'] as String? ?? json['condition_advice'] as String?,
@@ -105,25 +112,15 @@ class FoodAnalysisResult {
       portionAdvice: json['portionAdvice'] as String? ?? json['portion_advice'] as String?,
       alternative: json['alternative'] as String?,
       fiber: (json['fiber'] as num?)?.toDouble(),
-      vitamins: ((json['vitamins'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
-      minerals: ((json['minerals'] as List<dynamic>?) ?? []).map((e) => e.toString()).toList(),
-      plateBreakdown: ((json['plateBreakdown'] as List<dynamic>?) ?? json['plate_breakdown'] as List<dynamic>? ?? [])
-          .map((e) => e.toString())
-          .toList(),
-      redFlags: ((json['redFlags'] as List<dynamic>?) ?? json['red_flags'] as List<dynamic>? ?? [])
-          .map((e) => e.toString())
-          .toList(),
+      vitamins: _parseList(json['vitamins']),
+      minerals: _parseList(json['minerals']),
+      plateBreakdown: _parseList(json['plateBreakdown'] ?? json['plate_breakdown']),
+      redFlags: _parseList(json['redFlags'] ?? json['red_flags']),
       doctorTip: json['doctorTip'] as String? ?? json['doctor_tip'] as String?,
       analysisMode: json['analysisMode'] as String? ?? json['analysis_mode'] as String? ?? 'meal',
-      menuSuggestions: ((json['menuSuggestions'] as List<dynamic>?) ?? json['menu_suggestions'] as List<dynamic>? ?? [])
-          .map((e) => e.toString())
-          .toList(),
-      receiptInsights: ((json['receiptInsights'] as List<dynamic>?) ?? json['receipt_insights'] as List<dynamic>? ?? [])
-          .map((e) => e.toString())
-          .toList(),
-      grocerySuggestions: ((json['grocerySuggestions'] as List<dynamic>?) ?? json['grocery_suggestions'] as List<dynamic>? ?? [])
-          .map((e) => e.toString())
-          .toList(),
+      menuSuggestions: _parseList(json['menuSuggestions'] ?? json['menu_suggestions']),
+      receiptInsights: _parseList(json['receiptInsights'] ?? json['receipt_insights']),
+      grocerySuggestions: _parseList(json['grocerySuggestions'] ?? json['grocery_suggestions']),
       memoryInsight: json['memoryInsight'] as String? ?? json['memory_insight'] as String?,
       bestChoice: json['bestChoice'] as String? ?? json['best_choice'] as String?,
       budgetImpact: json['budgetImpact'] as String? ?? json['budget_impact'] as String?,

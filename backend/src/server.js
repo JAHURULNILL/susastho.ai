@@ -6,6 +6,7 @@ const app = express();
 const port = Number(process.env.PORT || 8787);
 const geminiApiKey = process.env.GEMINI_API_KEY || '';
 const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+const appApiKey = process.env.APP_API_KEY || '';
 
 app.use(cors());
 app.use(express.json({ limit: '15mb' }));
@@ -17,6 +18,42 @@ app.get('/', (_req, res) => {
 
 app.get('/health', (_req, res) => {
   res.json({ ok: true, provider: 'gemini', model: geminiModel, date: new Date().toISOString() });
+});
+
+app.get('/privacy', (_req, res) => {
+  res.type('html').send(`
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Privacy Policy - Sushastho.ai</title>
+      <style>
+        body { font-family: system-ui, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 2rem; color: #333; }
+        h1, h2 { color: #2D8A5B; }
+      </style>
+    </head>
+    <body>
+      <h1>Privacy Policy for Sushastho.ai</h1>
+      <p>Last updated: May 2026</p>
+      
+      <h2>1. Information We Collect</h2>
+      <p>We collect basic health metrics (age, weight, height, gender), dietary preferences, and activity data to provide personalized health insights. We also collect photos of food to analyze nutritional content via AI.</p>
+      
+      <h2>2. How We Use Your Information</h2>
+      <p>Your data is used solely to provide and improve the Sushastho.ai service, generate personalized meal plans, and track your wellness journey. We process food images through AI models to estimate nutrition.</p>
+      
+      <h2>3. Data Storage and Security</h2>
+      <p>We use industry-standard security measures, including Google Firebase, to securely store your data. We do not sell your personal data to third parties.</p>
+      
+      <h2>4. Your Rights</h2>
+      <p>You can delete your data at any time by uninstalling the app or contacting us.</p>
+      
+      <h2>5. Contact Us</h2>
+      <p>If you have any questions about this Privacy Policy, please contact us.</p>
+    </body>
+    </html>
+  `);
 });
 
 // ─── Shared helpers ──────────────────────────────────────────────
@@ -41,6 +78,17 @@ function requireKey(res) {
   if (!geminiApiKey) { res.status(500).json({ error: 'GEMINI_API_KEY is missing on backend.' }); return false; }
   return true;
 }
+
+function requireAppKey(req, res, next) {
+  if (!appApiKey) return next(); // If not set on backend, allow all (dev mode)
+  const key = req.headers['x-api-key'];
+  if (key !== appApiKey) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid API Key.' });
+  }
+  next();
+}
+
+app.use('/api', requireAppKey);
 
 async function geminiCall(prompt, { parts, temperature = 0.2, systemInstruction } = {}) {
   const contentParts = parts || [{ text: prompt }];
@@ -142,7 +190,10 @@ ${recentMealText}
     const analysis = safeJsonParse(extractText(payload));
 
     res.json({ model: { id: geminiModel, name: 'Gemini', version: geminiModel }, analysis });
-  } catch (e) { res.status(500).json({ error: errStr(e) }); }
+  } catch (e) {
+    console.error('Error in /api/nutrition/analyze:', e);
+    res.status(500).json({ error: errStr(e) });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -187,7 +238,10 @@ app.post('/api/doctor-note', async (req, res) => {
     const payload = await geminiCall(prompt, { temperature: 0.35 });
     const parsed = safeJsonParse(extractText(payload));
     res.json(parsed);
-  } catch (e) { res.status(500).json({ error: errStr(e) }); }
+  } catch (e) {
+    console.error('Error in /api/doctor-note:', e);
+    res.status(500).json({ error: errStr(e) });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -217,7 +271,10 @@ context: ${JSON.stringify(historicalContext || {}, null, 2)}
     const payload = await geminiCall(prompt, { temperature: 0.28 });
     const parsed = safeJsonParse(extractText(payload));
     res.json(parsed);
-  } catch (e) { res.status(500).json({ error: errStr(e) }); }
+  } catch (e) {
+    console.error('Error in /api/exercise-plan:', e);
+    res.status(500).json({ error: errStr(e) });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -247,7 +304,10 @@ context: ${JSON.stringify(historicalContext || {}, null, 2)}
     const payload = await geminiCall(prompt, { temperature: 0.32 });
     const parsed = safeJsonParse(extractText(payload));
     res.json(parsed);
-  } catch (e) { res.status(500).json({ error: errStr(e) }); }
+  } catch (e) {
+    console.error('Error in /api/meal-plan:', e);
+    res.status(500).json({ error: errStr(e) });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -259,7 +319,10 @@ app.post('/api/wellness/complete', async (req, res) => {
     if (!userId || !moduleId) return res.status(400).json({ error: 'userId এবং moduleId প্রয়োজন।' });
     // Without Firestore admin, return success — data is stored locally on device
     res.json({ success: true, streak: 1 });
-  } catch (e) { res.status(500).json({ error: errStr(e) }); }
+  } catch (e) {
+    console.error('Error in /api/wellness/complete:', e);
+    res.status(500).json({ error: errStr(e) });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -270,7 +333,10 @@ app.post('/api/wellness/nofap-reset', async (req, res) => {
     const { userId } = req.body ?? {};
     if (!userId) return res.status(400).json({ error: 'userId প্রয়োজন।' });
     res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: errStr(e) }); }
+  } catch (e) {
+    console.error('Error in /api/wellness/nofap-reset:', e);
+    res.status(500).json({ error: errStr(e) });
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════
@@ -315,7 +381,10 @@ app.post('/api/wellness/streak', async (req, res) => {
     if (!userId) return res.status(400).json({ error: 'userId প্রয়োজন।' });
     // Without Firestore admin, return empty — device has local data
     res.json({ success: true, streaks: {}, todayLogs: [], weekLogs: [], nofapTracker: null });
-  } catch (e) { res.status(500).json({ error: errStr(e) }); }
+  } catch (e) {
+    console.error('Error in /api/wellness/streak:', e);
+    res.status(500).json({ error: errStr(e) });
+  }
 });
 
 if (process.env.NODE_ENV !== 'production') {

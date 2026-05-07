@@ -79,10 +79,8 @@ class StepCounterTaskHandler extends TaskHandler {
     // Send data to main isolate (UI) 
     FlutterForegroundTask.sendDataToMain({'steps': _todaySteps});
 
-    // Save state periodically
-    if (_todaySteps % 5 == 0) {
-      await _saveState();
-    }
+    // Save state on every single step event to ensure 100% absolute background persistence
+    await _saveState();
   }
 
   Future<void> _saveState() async {
@@ -139,7 +137,6 @@ class StepCounterForegroundService {
         channelDescription: 'ব্যাকগ্রাউন্ডে আপনার হাঁটা ট্র্যাক করছে',
         channelImportance: NotificationChannelImportance.LOW,
         priority: NotificationPriority.LOW,
-        isSticky: true,
         playSound: false,
         enableVibration: false,
       ),

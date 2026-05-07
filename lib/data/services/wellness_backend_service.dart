@@ -10,11 +10,14 @@ class WellnessBackendService {
   WellnessBackendService({
     required FirebaseAuth? auth,
     String? baseUrl,
+    String? apiKey,
   })  : _auth = auth,
-        _baseUrl = (baseUrl ?? const String.fromEnvironment(AppStrings.backendBaseUrlEnv)).trim();
+        _baseUrl = (baseUrl ?? const String.fromEnvironment(AppStrings.backendBaseUrlEnv)).trim(),
+        _apiKey = (apiKey ?? const String.fromEnvironment(AppStrings.backendApiKeyEnv)).trim();
 
   final FirebaseAuth? _auth;
   final String _baseUrl;
+  final String _apiKey;
 
   String get _resolvedBaseUrl {
     if (_baseUrl.isEmpty) {
@@ -63,18 +66,41 @@ class WellnessBackendService {
   }
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> payload) async {
-    final response = await http
-        .post(
-          Uri.parse('$_resolvedBaseUrl$path'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode(payload),
-        )
-        .timeout(const Duration(seconds: 25));
+    final uri = Uri.parse('$_resolvedBaseUrl$path');
+    final response = await _postWithRetry(
+      uri,
+      headers: {
+        'Content-Type': 'application/json',
+        if (_apiKey.isNotEmpty) 'x-api-key': _apiKey,
+      },
+      body: jsonEncode(payload),
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(response.body);
     }
 
     return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+  }
+
+  Future<http.Response> _postWithRetry(Uri uri, {required Map<String, String> headers, required String body, int maxRetries = 3}) async {
+    int attempts = 0;
+    while (attempts < maxRetries) {
+      try {
+        final response = await http.post(
+          uri,
+          headers: headers,
+          body: body,
+        ).timeout(const Duration(seconds: 30));
+        return response;
+      } catch (e) {
+        attempts++;
+        if (attempts >= maxRetries) {
+          throw Exception('Failed after $maxRetries attempts: $e');
+        }
+        await Future.delayed(Duration(seconds: 2 * attempts));
+      }
+    }
+    throw Exception('Failed to execute request');
   }
 }

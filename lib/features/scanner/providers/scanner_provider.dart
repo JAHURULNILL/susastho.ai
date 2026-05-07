@@ -165,7 +165,9 @@ class ScannerNotifier extends Notifier<ScannerState> {
         result: result,
         isAnalyzing: false,
       );
-    } catch (error) {
+    } catch (error, stackTrace) {
+      print('DEBUG: Scanner Exception caught in scanner_provider.dart: $error');
+      print(stackTrace);
       final raw = error.toString();
       if (_isNetworkError(raw)) {
         await ref.read(offlineQueueServiceProvider).enqueue(
@@ -197,7 +199,7 @@ class ScannerNotifier extends Notifier<ScannerState> {
                   ? 'ছবি তুলুন অথবা বর্ণনা লিখুন।'
                   : _isNetworkError(raw)
                       ? 'নেটওয়ার্ক পাওয়া যাচ্ছে না। আপনার ইনপুট সেভ রাখা হয়েছে, পরে sync হবে।'
-                      : 'বিশ্লেষণ করা যায়নি। আবার চেষ্টা করুন।';
+                      : 'বিশ্লেষণ করা যায়নি। (${raw.replaceFirst('Exception: ', '')})';
 
       state = state.copyWith(
         isAnalyzing: false,

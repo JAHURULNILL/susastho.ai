@@ -69,10 +69,20 @@ class PlannerRepository {
 
     yield* ref
         .where('dateKey', isEqualTo: todayKey)
-        .orderBy('loggedAt', descending: false)
         .snapshots()
         .asyncMap((snapshot) async {
-      final items = snapshot.docs.map((doc) => WeeklyExerciseItem.fromJson(doc.id, doc.data())).toList();
+      final docs = snapshot.docs.toList();
+      // Sort in-memory by loggedAt ascending to avoid composite index requirements
+      docs.sort((a, b) {
+        final aLoggedAt = a.data()['loggedAt'] as Timestamp?;
+        final bLoggedAt = b.data()['loggedAt'] as Timestamp?;
+        if (aLoggedAt == null && bLoggedAt == null) return 0;
+        if (aLoggedAt == null) return 1;
+        if (bLoggedAt == null) return -1;
+        return aLoggedAt.compareTo(bLoggedAt); // ascending
+      });
+
+      final items = docs.map((doc) => WeeklyExerciseItem.fromJson(doc.id, doc.data())).toList();
       if (cacheKey != null) {
         await _storage.saveJsonList(
           cacheKey,

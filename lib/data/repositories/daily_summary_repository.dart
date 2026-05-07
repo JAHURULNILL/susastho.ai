@@ -55,10 +55,20 @@ class DailySummaryRepository {
 
     yield* ref
         .where('date', isEqualTo: todayKey)
-        .orderBy('loggedAt', descending: true)
         .snapshots()
         .asyncMap((snapshot) async {
-      final items = snapshot.docs
+      final docs = snapshot.docs.toList();
+      // Sort in-memory by loggedAt descending to avoid composite index requirements
+      docs.sort((a, b) {
+        final aLoggedAt = a.data()['loggedAt'] as Timestamp?;
+        final bLoggedAt = b.data()['loggedAt'] as Timestamp?;
+        if (aLoggedAt == null && bLoggedAt == null) return 0;
+        if (aLoggedAt == null) return 1;
+        if (bLoggedAt == null) return -1;
+        return bLoggedAt.compareTo(aLoggedAt); // descending
+      });
+
+      final items = docs
           .map((doc) => MealLogEntry.fromFirestore(doc.id, doc.data()))
           .toList();
       if (cacheKey != null) {
@@ -228,12 +238,30 @@ class DailySummaryRepository {
     final start = DateTime.now().subtract(Duration(days: days - 1));
     final snapshot = await ref
         .where('date', isGreaterThanOrEqualTo: _formatDate(start))
-        .orderBy('date', descending: true)
-        .orderBy('loggedAt', descending: true)
-        .limit(limit)
         .get();
 
-    return snapshot.docs
+    final docs = snapshot.docs.toList();
+    // Sort in-memory: first by date (descending), then by loggedAt (descending)
+    docs.sort((a, b) {
+      final aData = a.data();
+      final bData = b.data();
+      final aDate = aData['date'] as String? ?? '';
+      final bDate = bData['date'] as String? ?? '';
+      final dateCompare = bDate.compareTo(aDate); // descending
+      if (dateCompare != 0) {
+        return dateCompare;
+      }
+      final aLoggedAt = aData['loggedAt'] as Timestamp?;
+      final bLoggedAt = bData['loggedAt'] as Timestamp?;
+      if (aLoggedAt == null && bLoggedAt == null) return 0;
+      if (aLoggedAt == null) return 1;
+      if (bLoggedAt == null) return -1;
+      return bLoggedAt.compareTo(aLoggedAt); // descending
+    });
+
+    final limitedDocs = docs.take(limit);
+
+    return limitedDocs
         .map((doc) => {
               'foodName': doc.data()['foodName'],
               'date': doc.data()['date'],

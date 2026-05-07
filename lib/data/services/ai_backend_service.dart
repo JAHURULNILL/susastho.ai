@@ -15,10 +15,12 @@ final aiBackendServiceProvider = Provider<AiBackendService>((ref) {
 });
 
 class AiBackendService {
-  AiBackendService({String? baseUrl})
-      : _baseUrl = (baseUrl ?? const String.fromEnvironment(AppStrings.backendBaseUrlEnv)).trim();
+  AiBackendService({String? baseUrl, String? apiKey})
+      : _baseUrl = (baseUrl ?? const String.fromEnvironment(AppStrings.backendBaseUrlEnv)).trim(),
+        _apiKey = (apiKey ?? const String.fromEnvironment(AppStrings.backendApiKeyEnv)).trim();
 
   final String _baseUrl;
+  final String _apiKey;
 
   String get _resolvedBaseUrl {
     if (_baseUrl.isEmpty) {
@@ -61,18 +63,24 @@ class AiBackendService {
     }
 
     final uri = Uri.parse('$_resolvedBaseUrl/api/nutrition/analyze');
-    final response = await http.post(
+    final response = await _postWithRetry(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        if (_apiKey.isNotEmpty) 'x-api-key': _apiKey,
+      },
       body: jsonEncode(payload),
-    ).timeout(const Duration(seconds: 25));
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(response.body);
     }
 
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    final analysis = Map<String, dynamic>.from(decoded['analysis'] as Map<String, dynamic>);
+    if (decoded['analysis'] == null) {
+      throw Exception('Analysis content is missing in backend response: ${response.body}');
+    }
+    final analysis = Map<String, dynamic>.from(decoded['analysis'] as Map);
     final model = decoded['model'];
     if (model is Map<String, dynamic>) {
       analysis['model'] = model;
@@ -144,17 +152,41 @@ class AiBackendService {
 
   Future<Map<String, dynamic>> _post(String path, Map<String, dynamic> payload) async {
     final uri = Uri.parse('$_resolvedBaseUrl$path');
-    final response = await http.post(
+    final response = await _postWithRetry(
       uri,
-      headers: {'Content-Type': 'application/json'},
+      headers: {
+        'Content-Type': 'application/json',
+        if (_apiKey.isNotEmpty) 'x-api-key': _apiKey,
+      },
       body: jsonEncode(payload),
-    ).timeout(const Duration(seconds: 25));
+    );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw Exception(response.body);
     }
 
     return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
+  }
+
+  Future<http.Response> _postWithRetry(Uri uri, {required Map<String, String> headers, required String body, int maxRetries = 3}) async {
+    int attempts = 0;
+    while (attempts < maxRetries) {
+      try {
+        final response = await http.post(
+          uri,
+          headers: headers,
+          body: body,
+        ).timeout(const Duration(seconds: 30));
+        return response;
+      } catch (e) {
+        attempts++;
+        if (attempts >= maxRetries) {
+          throw Exception('Failed after $maxRetries attempts: $e');
+        }
+        await Future.delayed(Duration(seconds: 2 * attempts)); // Exponential backoff
+      }
+    }
+    throw Exception('Failed to execute request');
   }
 
   String _detectMimeType(String path) {
