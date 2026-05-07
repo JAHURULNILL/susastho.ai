@@ -88,6 +88,44 @@ extension HealthConditionX on HealthCondition {
         HealthCondition.hormonalImbalance => 'হরমোনাল সমস্যা',
       };
 
+  String get emoji => switch (this) {
+        HealthCondition.diabetes => '🩸',
+        HealthCondition.heartDisease => '🫀',
+        HealthCondition.hypertension => '🩺',
+        HealthCondition.underweight => '⚖️',
+        HealthCondition.obesity => '🏃‍♂️',
+        HealthCondition.bellyFat => '🔥',
+        HealthCondition.ed => '⚡',
+        HealthCondition.prematureEjaculation => '⏱️',
+        HealthCondition.urinaryIssues => '💧',
+        HealthCondition.fattyLiver => '🍏',
+        HealthCondition.kidneyIssues => '🛡️',
+        HealthCondition.digestiveIssues => '🔋',
+        HealthCondition.insomnia => '🌙',
+        HealthCondition.pcos => '🎀',
+        HealthCondition.irregularPeriods => '📅',
+        HealthCondition.hormonalImbalance => '🧪',
+      };
+
+  String get descriptionBn => switch (this) {
+        HealthCondition.diabetes => 'রক্তে গ্লুকোজ লেভেল ও সুগার কন্ট্রোল',
+        HealthCondition.heartDisease => 'কার্ডিওভাসকুলার ও হার্টের সুস্বাস্থ্য যত্ন',
+        HealthCondition.hypertension => 'উচ্চ রক্তচাপ নিয়ন্ত্রণ ও লবণমুক্ত খাবার',
+        HealthCondition.underweight => 'স্বাস্থ্যকর উপায়ে মাসল ও ওজন বৃদ্ধি',
+        HealthCondition.obesity => 'ওজন হ্রাস, চর্বি বার্ন ও অ্যাক্টিভ লাইফস্টাইল',
+        HealthCondition.bellyFat => 'পেটের জেদি মেদ কমানো ও মেটাবলিজম বুস্ট',
+        HealthCondition.ed => 'রক্ত সঞ্চালন বৃদ্ধি ও স্ট্যামিনা রুটিন',
+        HealthCondition.prematureEjaculation => 'ধৈর্য, স্ট্যামিনা ও মানসিক প্রশান্তি',
+        HealthCondition.urinaryIssues => 'মূত্রনালীর ইনফেকশন ও প্রস্টেট কেয়ার',
+        HealthCondition.fattyLiver => 'লিভারের ফ্যাট দূর ও বডি ডিটক্স ডায়েট',
+        HealthCondition.kidneyIssues => 'সোডিয়াম, পটাশিয়াম ও ফসফরাস কন্ট্রোল',
+        HealthCondition.digestiveIssues => 'গ্যাস, অ্যাসিডিটি কমানো ও অন্ত্রের যত্ন',
+        HealthCondition.insomnia => 'গভীর ঘুম ও স্লিপ রুটিন ম্যানেজমেন্ট',
+        HealthCondition.pcos => 'ওভারিয়ান সিন্ড্রোম ও হরমোন ব্যালেন্স',
+        HealthCondition.irregularPeriods => 'পিরিয়ড চক্র স্বাভাবিক করা ও পুষ্টির যত্ন',
+        HealthCondition.hormonalImbalance => 'মেটাবলিক ব্যালেন্স ও স্ট্রেস রিলিজ',
+      };
+
   String get key => switch (this) {
         HealthCondition.diabetes => 'diabetes',
         HealthCondition.heartDisease => 'heartDisease',

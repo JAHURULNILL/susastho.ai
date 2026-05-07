@@ -22,6 +22,7 @@ class ActivityTrackingService {
       return;
     }
 
+    await Permission.notification.request();
     final permission = await Permission.activityRecognition.request();
     if (!permission.isGranted) {
       dev.log('[ActivityTracking] Activity recognition permission denied');

@@ -93,17 +93,19 @@ class ScannerNotifier extends Notifier<ScannerState> {
       return;
     }
 
+    final textToAnalyze = state.description;
     state = state.copyWith(
       image: file,
       isAnalyzing: true,
       clearError: true,
       clearResult: true,
+      description: '', // Clear text field immediately on submit
     );
 
     await _analyze(
       ref,
       image: file,
-      effectiveDescription: state.description,
+      effectiveDescription: textToAnalyze,
     );
   }
 
@@ -113,7 +115,8 @@ class ScannerNotifier extends Notifier<ScannerState> {
       state = state.copyWith(errorMessage: 'প্রথমে আপনার প্রোফাইল সম্পূর্ণ করুন।');
       return;
     }
-    if (state.description.trim().isEmpty) {
+    final textToAnalyze = state.description;
+    if (textToAnalyze.trim().isEmpty) {
       state = state.copyWith(errorMessage: 'কি খেয়েছেন বা কি দেখতে চাইছেন সেটা লিখুন।');
       return;
     }
@@ -122,12 +125,13 @@ class ScannerNotifier extends Notifier<ScannerState> {
       isAnalyzing: true,
       clearError: true,
       clearResult: true,
+      description: '', // Clear text field immediately on submit
     );
 
     await _analyze(
       ref,
-      description: state.description,
-      effectiveDescription: state.description,
+      description: textToAnalyze,
+      effectiveDescription: textToAnalyze,
     );
   }
 

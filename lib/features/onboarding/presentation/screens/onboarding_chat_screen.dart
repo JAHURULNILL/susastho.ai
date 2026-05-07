@@ -266,22 +266,110 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          Wrap(
-            spacing: 10,
-            runSpacing: 10,
-            children: state.availableConditions
-                .map(
-                  (condition) => OptionChip(
-                    label: condition.labelBn,
-                    isSelected: state.conditions.contains(condition),
-                    onTap: () {
-                      ref.read(onboardingProvider.notifier).toggleCondition(condition);
-                      _scrollToBottom();
-                    },
+          ...state.availableConditions.map((condition) {
+            final isSelected = state.conditions.contains(condition);
+            return AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              margin: const EdgeInsets.only(bottom: 12),
+              decoration: BoxDecoration(
+                color: isSelected ? AppColors.primaryPale : Colors.white,
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: isSelected ? AppColors.primaryLight : AppColors.border.withValues(alpha: 0.8),
+                  width: isSelected ? 2.0 : 1.5,
+                ),
+                boxShadow: [
+                  if (isSelected)
+                    BoxShadow(
+                      color: AppColors.primary.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    )
+                  else
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.02),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                ],
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    ref.read(onboardingProvider.notifier).toggleCondition(condition);
+                    _scrollToBottom();
+                  },
+                  borderRadius: BorderRadius.circular(22),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                    child: Row(
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : AppColors.pageBg,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            condition.emoji,
+                            style: const TextStyle(fontSize: 20),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                condition.labelBn,
+                                style: TextStyle(
+                                  color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                              ),
+                              const SizedBox(height: 3),
+                              Text(
+                                condition.descriptionBn,
+                                style: TextStyle(
+                                  color: isSelected ? AppColors.primary.withValues(alpha: 0.8) : AppColors.textSecondary,
+                                  fontSize: 11.5,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppColors.primaryLight : Colors.transparent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: isSelected ? AppColors.primaryLight : AppColors.textMuted.withValues(alpha: 0.4),
+                              width: 2,
+                            ),
+                          ),
+                          child: isSelected
+                              ? const Icon(
+                                  Icons.check_rounded,
+                                  size: 15,
+                                  color: Colors.white,
+                                )
+                              : null,
+                        ),
+                      ],
+                    ),
                   ),
-                )
-                .toList(),
-          ),
+                ),
+              ),
+            );
+          }),
           const SizedBox(height: 24),
           _ProfilePreviewCard(state: state),
           const SizedBox(height: 24),

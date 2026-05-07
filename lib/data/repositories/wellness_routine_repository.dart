@@ -266,6 +266,12 @@ class WellnessRoutineRepository {
         'totalResets': resets + 1,
       });
     }
+
+    // Delete today's completion log for nofap so they are no longer marked as done today
+    final logRef = _firestore?.collection('wellness_logs').doc('${uid}_${todayKey}_nofap');
+    if (logRef != null) {
+      await logRef.delete();
+    }
   }
 
   Future<void> updateNofapStreak(int newStreak) async {

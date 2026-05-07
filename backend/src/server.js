@@ -184,6 +184,7 @@ ${recentMealText}
       'তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ এবং local food intelligence specialist।',
       'সব response বাংলায় দেবে এবং valid JSON ছাড়া অন্য কিছু দেবে না।',
       'কোনো foreign dish, western replacement বা non-Bangladeshi example ব্যবহার করবে না।',
+      'রেসপন্স অত্যন্ত দ্রুত ও ফাস্ট করার জন্য প্রতিটি বিশ্লেষণ, পরামর্শ এবং বিবরণ অত্যন্ত সংক্ষিপ্ত, সুনির্দিষ্ট এবং ১-২ বাক্যের মধ্যে সীমাবদ্ধ রাখবে। অপ্রয়োজনীয় ব্যাখ্যা বা দীর্ঘ আলোচনা বর্জন করবে।',
     ].join(' ');
 
     const payload = await geminiCall(prompt, { parts: contentParts, temperature: 0.2, systemInstruction });
@@ -205,9 +206,10 @@ app.post('/api/doctor-note', async (req, res) => {
     const { profile, todayData, recentCategories = [], historicalContext = {} } = req.body ?? {};
     if (!profile || !todayData) return res.status(400).json({ error: 'profile এবং todayData প্রয়োজন।' });
 
-    const now = new Date();
-    const hour = now.getHours();
-    const dayOfWeek = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'][now.getDay()];
+    const nowUtc = new Date();
+    const now = new Date(nowUtc.getTime() + (6 * 60 * 60 * 1000));
+    const hour = now.getUTCHours();
+    const dayOfWeek = ['রবিবার','সোমবার','মঙ্গলবার','বুধবার','বৃহস্পতিবার','শুক্রবার','শনিবার'][now.getUTCDay()];
     const timeOfDay = hour < 6 ? 'রাত' : hour < 12 ? 'সকাল' : hour < 17 ? 'দুপুর' : hour < 20 ? 'বিকাল' : 'রাত';
 
     const allCategories = ['morning_routine','food_suggestion','water_reminder','exercise_tip','sleep_advice','meditation_stress','mental_health','lifestyle_habit','condition_specific','nutrition_fact','motivation','digestion','sexual_health','hormonal_health','posture_ergonomics','breathing_exercise','sunlight_vitamin_d','intermittent_fasting','gut_health','immune_system'];
@@ -231,9 +233,9 @@ app.post('/api/doctor-note', async (req, res) => {
 পরামর্শের ধরন: ${category}
 
 শুধু valid JSON:
-{"content":"২-৩ বাক্যের উষ্ণ, নির্দিষ্ট পরামর্শ","category":"${category}","contextSnapshot":{"timeOfDay":"${timeOfDay}","dayOfWeek":"${dayOfWeek}","totalCal":${todayData.totalCal || 0},"waterLog":${todayData.waterLog || 0},"exerciseDone":${todayData.exerciseDone || 0}}}
+{"content":"১-২ বাক্যের উষ্ণ, সংক্ষিপ্ত নির্দিষ্ট পরামর্শ","category":"${category}","contextSnapshot":{"timeOfDay":"${timeOfDay}","dayOfWeek":"${dayOfWeek}","totalCal":${todayData.totalCal || 0},"waterLog":${todayData.waterLog || 0},"exerciseDone":${todayData.exerciseDone || 0}}}
 
-নিয়ম: ${profile.name} নাম ১বার ব্যবহার করবে, generic advice নয়, calm premium tone, বাংলায়।`;
+নিয়ম: ${profile.name} নাম ১বার ব্যবহার করবে, রেসপন্স অত্যন্ত দ্রুত পাওয়ার জন্য পরামর্শটি সর্বোচ্চ ১-২ বাক্যের মধ্যে রাখবে, generic advice নয়, calm premium tone, বাংলায়।`;
 
     const payload = await geminiCall(prompt, { temperature: 0.35 });
     const parsed = safeJsonParse(extractText(payload));
@@ -263,10 +265,10 @@ app.post('/api/exercise-plan', async (req, res) => {
 
 context: ${JSON.stringify(historicalContext || {}, null, 2)}
 
-আজকের জন্য ৩টি উপযুক্ত ব্যায়াম suggest করো। equipment-less, ঘরে করা যায় এমন।
+আজকের জন্য ৩টি উপযুক্ত ব্যায়াম suggest করো। equipment-less, ঘরে করা যায় এমন। রেসপন্স অত্যন্ত দ্রুত করার জন্য instructions এবং condition_benefit সর্বোচ্চ ১টি সংক্ষিপ্ত বাক্যের মধ্যে সীমাবদ্ধ রাখবে।
 
 শুধু JSON:
-{"items":[{"name":"ব্যায়ামের নাম বাংলায়","duration_minutes":15,"calories_burned":80,"instructions":"কিভাবে করবে","condition_benefit":"কোন সমস্যায় সাহায্য করে"}]}`;
+{"items":[{"name":"ব্যায়ামের নাম বাংলায়","duration_minutes":15,"calories_burned":80,"instructions":"সংক্ষিপ্ত ১ বাক্যে নিয়ম","condition_benefit":"সংক্ষিপ্ত ১ বাক্যে উপকার"}]}`;
 
     const payload = await geminiCall(prompt, { temperature: 0.28 });
     const parsed = safeJsonParse(extractText(payload));
@@ -298,8 +300,13 @@ context: ${JSON.stringify(historicalContext || {}, null, 2)}
 
 শুধু বাংলাদেশি সহজলভ্য খাবার, budget-friendly, practical।
 
+নিয়ম: 
+১. অবশ্যই সপ্তাহের ৭টি দিন (saturday, sunday, monday, tuesday, wednesday, thursday, friday) সম্পূর্ণভাবে তথ্য দিয়ে পূরণ করতে হবে। কোনো দিন ফাকা বা খালি অবজেক্ট {} রাখা যাবে না। 
+২. প্রতিটি দিনের morning, lunch, afternoon, night এর জন্য বাস্তবসম্মত বাংলাদেশি খাবার এবং ক্যালরির হিসাব দিয়ে পূর্ণাঙ্গ প্ল্যান দাও।
+৩. রেসপন্স অত্যন্ত দ্রুত পাওয়ার জন্য খাবারের নামগুলো খুব ছোট রাখবে (যেমন: "লাল চালের ভাত, রুই মাছ, ডাল") এবং কোনো দীর্ঘ রেসিপি বা অতিরিক্ত বর্ণনা দেবে না। weeklyTips ও specialNotes সর্বোচ্চ ১-২টি সংক্ষিপ্ত বাক্যের মধ্যে শেষ করবে।
+
 শুধু JSON:
-{"plan":{"weekOf":"${weekOf || ''}","days":{"saturday":{"morning":{"items":["খাবার"],"calories":320},"lunch":{"items":["খাবার"],"calories":480},"afternoon":{"items":["খাবার"],"calories":160},"night":{"items":["খাবার"],"calories":360}},"sunday":{},"monday":{},"tuesday":{},"wednesday":{},"thursday":{},"friday":{}},"weeklyTips":["টিপস"],"specialNotes":"নোট"}}`;
+{"plan":{"weekOf":"${weekOf || ''}","days":{"saturday":{"morning":{"items":["২টি ডিম","কলা"],"calories":320},"lunch":{"items":["ভাত","ডাল","মাছ"],"calories":480},"afternoon":{"items":["ছোলা"],"calories":160},"night":{"items":["রুটি","সবজি"],"calories":360}},"sunday":{"morning":{"items":["লাল আটার রুটি","ডিম"],"calories":310},"lunch":{"items":["ভাত","চিকেন কারি","শাক"],"calories":510},"afternoon":{"items":["কাঠবাদাম"],"calories":140},"night":{"items":["সবজি স্যুপ"],"calories":320}},"monday":{"morning":{"items":["ওটস","দুধ"],"calories":290},"lunch":{"items":["ভাত","ডাল","ডিম ভাজি"],"calories":460},"afternoon":{"items":["আপেল"],"calories":120},"night":{"items":["রুটি","মাছ"],"calories":340}},"tuesday":{"morning":{"items":["চিড়া","দই"],"calories":280},"lunch":{"items":["ভাত","ডাল","মুরগির মাংস"],"calories":490},"afternoon":{"items":["পেয়ারা"],"calories":110},"night":{"items":["রুটি","ডাল"],"calories":330}},"wednesday":{"morning":{"items":["রুটি","সবজি"],"calories":300},"lunch":{"items":["ভাত","মাছ","শাক"],"calories":480},"afternoon":{"items":["মুড়ি"],"calories":100},"night":{"items":["সবজি স্যুপ"],"calories":310}},"thursday":{"morning":{"items":["ডিমসিদ্ধ","দুধ"],"calories":320},"lunch":{"items":["ভাত","চিকেন"],"calories":500},"afternoon":{"items":["বাদাম"],"calories":150},"night":{"items":["রুটি","সবজি"],"calories":340}},"friday":{"morning":{"items":["ডিম ভাজি","রুটি"],"calories":310},"lunch":{"items":["ভাত","গরুর মাংস","ডাল"],"calories":520},"afternoon":{"items":["ছোলা"],"calories":130},"night":{"items":["মাছ","সবজি"],"calories":320}}},"weeklyTips":["টিপস ১","টিপস ২"],"specialNotes":"নোট"}`;
 
     const payload = await geminiCall(prompt, { temperature: 0.32 });
     const parsed = safeJsonParse(extractText(payload));

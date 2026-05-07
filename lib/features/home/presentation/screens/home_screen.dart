@@ -1,4 +1,4 @@
-﻿import 'dart:async';
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -103,7 +103,7 @@ class HomeScreen extends ConsumerWidget {
                 child: _QuickStatCard(
                   label: 'স্টেপ',
                   value: todaySteps?.steps == null || todaySteps!.steps == 0
-                      ? '—'
+                      ? '০'
                       : BengaliFormatters.toBengaliNumber(todaySteps.steps),
                   sublabel: profile.dailyStepTarget > 0
                       ? '/${BengaliFormatters.toBengaliNumber(profile.dailyStepTarget)}'
@@ -223,74 +223,7 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _DoctorNoteCard extends StatelessWidget {
-  const _DoctorNoteCard({
-    required this.note,
-    required this.instantAdvice,
-  });
-
-  final DoctorNoteRecord? note;
-  final String instantAdvice;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF7FCF8), Color(0xFFF1F8F3)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(15, 38, 27, 0.04),
-            blurRadius: 8,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color.fromRGBO(45, 106, 79, 0.08),
-            blurRadius: 18,
-            spreadRadius: -10,
-            offset: Offset(0, 12),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: AppColors.primaryPale,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            alignment: Alignment.center,
-            child: const Icon(Icons.favorite_rounded, color: AppColors.primary, size: 17),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              note?.content ?? instantAdvice,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: AppTextStyles.body.copyWith(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.w500,
-                height: 1.45,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _QuickStatCard extends StatelessWidget {
+class _DoctorNoteCard extends StatelessWidget {\n  const _DoctorNoteCard({\n    required this.note,\n    required this.instantAdvice,\n  });\n\n  final DoctorNoteRecord? note;\n  final String instantAdvice;\n\n  @override\n  Widget build(BuildContext context) {\n    return Container(\n      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),\n      decoration: BoxDecoration(\n        color: AppColors.primaryFaint,\n        borderRadius: BorderRadius.circular(20),\n        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),\n      ),\n      child: Row(\n        crossAxisAlignment: CrossAxisAlignment.center,\n        children: [\n          Container(\n            padding: const EdgeInsets.all(8),\n            decoration: const BoxDecoration(\n              color: AppColors.white,\n              shape: BoxShape.circle,\n              boxShadow: [\n                BoxShadow(\n                  color: Color.fromRGBO(0, 0, 0, 0.05),\n                  blurRadius: 4,\n                  offset: Offset(0, 2),\n                ),\n              ],\n            ),\n            child: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 18),\n          ),\n          const SizedBox(width: 14),\n          Expanded(\n            child: Text(\n              note?.content ?? instantAdvice,\n              maxLines: 2,\n              overflow: TextOverflow.ellipsis,\n              style: AppTextStyles.body.copyWith(\n                color: AppColors.textPrimary,\n                fontWeight: FontWeight.w500,\n                fontSize: 13,\n                height: 1.4,\n              ),\n            ),\n          ),\n        ],\n      ),\n    );\n  }\n}\n\nclass _QuickStatCard extends StatelessWidget {
   const _QuickStatCard({
     required this.label,
     required this.value,
@@ -446,6 +379,41 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
           ),
           const SizedBox(height: 14),
           if (!settings.fastingEnabled || startedAt == null) ...[
+                  style: AppTextStyles.caption.copyWith(
+                    color: settings.fastingEnabled ? AppColors.primary : AppColors.textMuted,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          if (!settings.fastingEnabled || startedAt == null) ...[
+            PrimaryButton(
+              label: 'ফাস্টিং শুরু করুন',
+              onPressed: () => _setStartedAt(DateTime.now()),
+              icon: Icons.play_arrow_rounded,
+            ),
+            const SizedBox(height: 10),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _pickCustomStart,
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                    child: const Text('কাস্টম সময়'),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _pickWindow,
+                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)),
+                    child: Text('${BengaliFormatters.toBengaliNumber(settings.fastingWindowHours)} ঘণ্টা উইন্ডো'),
+                  ),
+                ),
+              ],
+            ),
           ] else ...[
             Text(
               'শুরু: ${_formatDateTime(startedAt)}',
@@ -464,39 +432,6 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
                 Expanded(
                   child: _FastingMetric(
                     title: 'বাকি আছে',
-                    value: _formatDuration(remaining),
-                    highlighted: true,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 9,
-                backgroundColor: AppColors.border,
-                color: remaining == Duration.zero ? AppColors.primary : AppColors.primaryLight,
-              ),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => _setStartedAt(DateTime.now()),
-                child: const Text('এখন শুরু'),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: PrimaryButton(
-              label: 'সময় ঠিক করুন',
-                  onPressed: _pickCustomStart,
-                  height: 46,
-                  icon: Icons.schedule_rounded,
                 ),
               ),
             ],

@@ -50,7 +50,10 @@ class GreetingHeader extends StatelessWidget {
               ),
               TextSpan(
                 text: shortName,
-                style: AppTextStyles.screenTitle.copyWith(fontSize: 28),
+                style: AppTextStyles.screenTitle.copyWith(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

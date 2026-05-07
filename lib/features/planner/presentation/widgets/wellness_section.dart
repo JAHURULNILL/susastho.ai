@@ -1245,112 +1245,380 @@ class _NoFapSheet extends StatelessWidget {
     final streak = plan.nofapStreak;
     final milestones = <int>[3, 7, 14, 30, 60, 90];
     final benefits = _benefitsFor(streak);
+    final isDone = plan.isDoneToday(WellnessRoutineType.nofap);
 
-    return _BaseSessionSheet(
-      meta: meta,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  '${BengaliFormatters.toBengaliNumber(streak)} দিনের streak',
-                  style: AppTextStyles.metricSmall.copyWith(color: meta.color, fontSize: 28),
-                ),
-              ),
-              IconButton(
-                onPressed: () => _showEditDialog(context, streak),
-                icon: Icon(Icons.edit_rounded, color: meta.color),
-                tooltip: 'দিন সেট করুন',
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F172A), // Premium Slate Black backdrop for Iron Will look
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(32),
+          topRight: Radius.circular(32),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            24,
+            12,
+            24,
+            24 + MediaQuery.viewInsetsOf(context).bottom,
           ),
-          const SizedBox(height: 10),
-          Text(
-            plan.isDoneToday(WellnessRoutineType.nofap)
-                ? 'আজকের check-in হয়ে গেছে। consistency ধরে রাখুন।'
-                : 'আজকের দিনটা clean গেলে check-in দিন। relapse হলে reset করুন।',
-            style: AppTextStyles.body,
-          ),
-          const SizedBox(height: 16),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: milestones.map((item) {
-              final unlocked = streak >= item;
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: unlocked ? meta.pale : AppColors.border,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${BengaliFormatters.toBengaliNumber(item)} দিন',
-                  style: AppTextStyles.caption.copyWith(
-                    color: unlocked ? meta.color : AppColors.textMuted,
-                    fontWeight: FontWeight.w700,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Top Indicator and header
+                Center(
+                  child: Container(
+                    width: 48,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.16),
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
                 ),
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 18),
-          Text('Unlocked benefits', style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 10),
-          for (final item in benefits)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('• ', style: AppTextStyles.bodyLarge.copyWith(color: meta.color)),
-                  Expanded(child: Text(item, style: AppTextStyles.body)),
-                ],
-              ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: Colors.indigo.withValues(alpha: 0.18),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.indigo.withValues(alpha: 0.3)),
+                      ),
+                      alignment: Alignment.center,
+                      child: const Text('🛡️', style: TextStyle(fontSize: 22)),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'আত্মশুদ্ধি (Iron Will)',
+                            style: AppTextStyles.cardTitle.copyWith(
+                              color: AppColors.white,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'সংযম ও সংকল্প ট্র্যাকার',
+                            style: AppTextStyles.caption.copyWith(color: Colors.indigoAccent),
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => _showEditDialog(context, streak),
+                      icon: const Icon(Icons.edit_note_rounded, color: Colors.indigoAccent, size: 28),
+                      tooltip: 'দিন সেট করুন',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+
+                // Giant Circular "Iron Will" Counter Section
+                Center(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Inner glowing circle background
+                      Container(
+                        width: 184,
+                        height: 184,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFF1E293B),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.indigo.withValues(alpha: 0.22),
+                              blurRadius: 36,
+                              spreadRadius: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Circular indicator ring
+                      SizedBox(
+                        width: 200,
+                        height: 200,
+                        child: CircularProgressIndicator(
+                          value: (streak % 30) / 30, // Show daily progress cycle relative to monthly milestones
+                          strokeWidth: 6,
+                          color: Colors.indigoAccent,
+                          backgroundColor: Colors.white.withValues(alpha: 0.05),
+                        ),
+                      ),
+                      // Center Counter Texts
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            BengaliFormatters.toBengaliNumber(streak),
+                            style: const TextStyle(
+                              fontSize: 54,
+                              fontWeight: FontWeight.w900,
+                              color: AppColors.white,
+                              height: 1.0,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            'দিনের স্ট্রিক',
+                            style: AppTextStyles.caption.copyWith(
+                              color: Colors.indigoAccent,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 1.0,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 26),
+
+                // Check-in status capsule
+                Center(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: isDone 
+                          ? Colors.emerald.withValues(alpha: 0.12)
+                          : Colors.amber.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(100),
+                      border: Border.all(
+                        color: isDone 
+                            ? Colors.emerald.withValues(alpha: 0.3)
+                            : Colors.amber.withValues(alpha: 0.3),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          isDone ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
+                          color: isDone ? Colors.emerald : Colors.amber,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          isDone 
+                              ? 'আজকের দিন সফলভাবে চেক-ইন হয়েছে!' 
+                              : 'আত্মসংযম আজ সফলভাবে চলছে...',
+                          style: AppTextStyles.caption.copyWith(
+                            color: isDone ? Colors.emerald : Colors.amber,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Milestones Track
+                Text(
+                  'Milestones & Achievements',
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 44,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: milestones.length,
+                    separatorBuilder: (context, index) => const SizedBox(width: 10),
+                    itemBuilder: (context, index) {
+                      final item = milestones[index];
+                      final unlocked = streak >= item;
+                      return Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: unlocked 
+                              ? Colors.indigoAccent.withValues(alpha: 0.18)
+                              : Colors.white.withValues(alpha: 0.04),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: unlocked 
+                                ? Colors.indigoAccent.withValues(alpha: 0.4)
+                                : Colors.white.withValues(alpha: 0.08),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              unlocked ? Icons.verified_rounded : Icons.lock_outline_rounded,
+                              color: unlocked ? Colors.indigoAccent : Colors.white38,
+                              size: 16,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '${BengaliFormatters.toBengaliNumber(item)} দিন',
+                              style: AppTextStyles.caption.copyWith(
+                                color: unlocked ? Colors.white : Colors.white38,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 28),
+
+                // Beautiful Unlocked benefits card
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.03),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.shield_moon_rounded, color: Colors.indigoAccent, size: 20),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Unlocked Benefits',
+                            style: AppTextStyles.bodyLarge.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      for (final item in benefits)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('⚡ ', style: TextStyle(fontSize: 16)),
+                              Expanded(
+                                child: Text(
+                                  item,
+                                  style: AppTextStyles.body.copyWith(
+                                    color: Colors.white70,
+                                    height: 1.4,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
+
+                // Interactive Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        height: 54,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(18),
+                          gradient: isDone 
+                              ? null 
+                              : const LinearGradient(
+                                  colors: [Colors.indigoAccent, Colors.indigo],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                ),
+                        ),
+                        child: ElevatedButton(
+                          onPressed: isDone
+                              ? null
+                              : () async {
+                                  await onCheckIn();
+                                  if (context.mounted) {
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: isDone ? Colors.white.withValues(alpha: 0.06) : Colors.transparent,
+                            shadowColor: Colors.transparent,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                isDone ? Icons.check_circle_outline : Icons.bolt_rounded,
+                                color: isDone ? Colors.white38 : Colors.white,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                isDone ? 'আজকের জন্য পার করেছেন' : 'আজকের দিন পার করলাম',
+                                style: TextStyle(
+                                  color: isDone ? Colors.white38 : Colors.white,
+                                  fontWeight: FontWeight.w900,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 54,
+                        child: OutlinedButton(
+                          onPressed: () => _confirmRelapse(context),
+                          style: OutlinedButton.styleFrom(
+                            foregroundColor: AppColors.red,
+                            side: BorderSide(color: AppColors.red.withValues(alpha: 0.4), width: 1.5),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(18),
+                            ),
+                          ),
+                          child: const Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.history_toggle_off_rounded, size: 20),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Relapse হয়েছে (Reset)',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-          const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: FilledButton(
-                  onPressed: () async {
-                    await onCheckIn();
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: meta.color,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('আজকের দিন পার করলাম'),
-                ),
-              ),
-            ],
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    await onReset();
-                    if (context.mounted) {
-                      Navigator.of(context).pop();
-                    }
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.red,
-                    side: const BorderSide(color: AppColors.red),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: const Text('Relapse হয়েছে'),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -1358,21 +1626,65 @@ class _NoFapSheet extends StatelessWidget {
   List<String> _benefitsFor(int streak) {
     final benefits = <String>[];
     if (streak >= 1) {
-      benefits.add('আজকের decision muscle আরও একটু strong হয়েছে।');
+      benefits.add('আজকের আত্মনিয়ন্ত্রণ পেশী আরও একটু শক্তিশালী হয়েছে।');
     }
     if (streak >= 3) {
-      benefits.add('Focus আর self-respect ধীরে ধীরে steady হচ্ছে।');
+      benefits.add('ফোকাস এবং আত্মসম্মানবোধ ধীরে ধীরে সুস্থ ও অবিচল হচ্ছে।');
     }
     if (streak >= 7) {
-      benefits.add('Impulse control আগের চেয়ে better হতে শুরু করে।');
+      benefits.add('সাময়িক প্রলোভন নিয়ন্ত্রণের ক্ষমতা আগের চেয়ে অনেক ভালো হচ্ছে।');
     }
     if (streak >= 14) {
-      benefits.add('রুটিনের উপর বিশ্বাস বাড়ে, guilt কমে।');
+      benefits.add('নিজের রুটিনের প্রতি গভীর আস্থা ও মনস্তাত্ত্বিক গিল্ট হ্রাস পেয়েছে।');
     }
     if (streak >= 30) {
-      benefits.add('দীর্ঘমেয়াদি discipline build হওয়ার শক্ত ভিত্তি তৈরি হয়।');
+      benefits.add('দীর্ঘমেয়াদী সংকল্প ও কঠোর আত্মশাসন গঠনের স্থায়ী ভিত্তি তৈরি হয়েছে।');
     }
-    return benefits.isEmpty ? ['প্রতিদিনের clean check-in future streak-এর base তৈরি করে।'] : benefits;
+    return benefits.isEmpty ? ['প্রতিদিনের সুনির্দিষ্ট চেক-ইন আপনার ভবিষ্যৎ আত্মনিয়ন্ত্রণের মজবুত ভিত্তি গড়ে তোলে।'] : benefits;
+  }
+
+  Future<void> _confirmRelapse(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B), // Sleek dialog
+        title: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, color: AppColors.red, size: 28),
+            const SizedBox(width: 10),
+            Text(
+              'আপনি কি নিশ্চিত?',
+              style: AppTextStyles.cardTitle.copyWith(color: AppColors.white),
+            ),
+          ],
+        ),
+        content: Text(
+          'রিলেপস সিলেক্ট করলে আপনার কষ্টার্জিত সমস্ত স্ট্রিক ০ দিনে রিসেট হবে এবং নতুন করে সংকল্প শুরু হবে।',
+          style: AppTextStyles.body.copyWith(color: Colors.white70, height: 1.4),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'ভুল করে চেপেছি',
+              style: AppTextStyles.caption.copyWith(color: Colors.white38, fontWeight: FontWeight.bold),
+            ),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.red),
+            child: const Text('হ্যাঁ, রিসেট করুন'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await onReset();
+      if (context.mounted) {
+        Navigator.of(context).pop();
+      }
+    }
   }
 
   Future<void> _showEditDialog(BuildContext context, int currentStreak) async {
@@ -1380,19 +1692,33 @@ class _NoFapSheet extends StatelessWidget {
     final result = await showDialog<int>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Streak দিন সেট করুন'),
+        backgroundColor: const Color(0xFF1E293B),
+        title: Text(
+          'Streak দিন সেট করুন',
+          style: AppTextStyles.cardTitle.copyWith(color: AppColors.white),
+        ),
         content: TextField(
           controller: controller,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'কত দিন হয়েছে?',
-            border: OutlineInputBorder(),
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
+            labelText: 'কত দিন হয়েছে?',
+            labelStyle: const TextStyle(color: Colors.white38),
+            border: const OutlineInputBorder(),
+            focusedBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.indigoAccent),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderSide: const BorderSide(color: Colors.white12),
+              borderRadius: BorderRadius.circular(12),
+            ),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('বাতিল'),
+            child: const Text('বাতিল', style: TextStyle(color: Colors.white38)),
           ),
           FilledButton(
             onPressed: () {
@@ -1401,6 +1727,7 @@ class _NoFapSheet extends StatelessWidget {
                 Navigator.of(ctx).pop(val);
               }
             },
+            style: FilledButton.styleFrom(backgroundColor: Colors.indigoAccent),
             child: const Text('সেভ করুন'),
           ),
         ],

@@ -11,15 +11,15 @@ service cloud.firestore {
     }
 
     match /wellness_logs/{logId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
     match /wellness_streaks/{docId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
       allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
-      allow update, delete: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
     match /nofap_tracker/{userId} {
@@ -27,7 +27,7 @@ service cloud.firestore {
     }
 
     match /wellness_notes/{docId} {
-      allow read: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow read: if request.auth != null && (resource == null || resource.data.userId == request.auth.uid);
       allow write: if false;
     }
   }

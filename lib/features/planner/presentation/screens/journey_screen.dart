@@ -122,7 +122,7 @@ class _JourneyWeeklyTab extends ConsumerWidget {
     final exercises = ref.watch(todayExercisesProvider).asData?.value ?? const [];
     final weeklyCalories = ref.watch(weeklyCaloriesProvider).asData?.value ?? const <String, double>{};
     final profile = ref.watch(userProfileProvider).asData?.value;
-    final weightHistory = ref.watch(weightHistoryProvider).asData?.value ?? const <WeightHistoryEntry>[];
+    final weeklySteps = ref.watch(weeklyStepsProvider).asData?.value ?? const <String, int>{};
     final wellness = ref.watch(wellnessSnapshotProvider).asData?.value;
     final previousWeeklyCalories = ref.watch(previousWeeklyCaloriesProvider).asData?.value ?? const <String, double>{};
     final previousWeeklySteps = ref.watch(previousWeeklyStepsProvider).asData?.value ?? const <String, int>{};
@@ -185,7 +185,10 @@ class _JourneyWeeklyTab extends ConsumerWidget {
         weekData: _buildWeekBars(weeklyCalories),
         dailyGoal: dailyGoal.toDouble(),
       ),
-      _WeightTrendCard(entries: weightHistory),
+      _WeeklyStepsChart(
+        weekData: _buildWeekStepBars(weeklySteps),
+        dailyGoal: profile.dailyStepTarget.toDouble(),
+      ),
       _HealthGoalProgress(
         profile: profile,
         summaryWater: summary?.waterGlasses ?? 0,
@@ -296,6 +299,15 @@ List<double> _buildWeekBars(Map<String, double> weekly) {
     final date = start.add(Duration(days: index));
     final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
     return weekly[key] ?? 0;
+  });
+}
+
+List<double> _buildWeekStepBars(Map<String, int> weekly) {
+  final start = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+  return List.generate(7, (index) {
+    final date = start.add(Duration(days: index));
+    final key = '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+    return (weekly[key] ?? 0).toDouble();
   });
 }
 
@@ -559,90 +571,222 @@ class _WeeklyCaloriesChart extends StatelessWidget {
   }
 }
 
-class _WeightTrendCard extends StatelessWidget {
-  const _WeightTrendCard({required this.entries});
+class _WeeklyStepsChart extends StatelessWidget {
+  const _WeeklyStepsChart({
+    required this.weekData,
+    required this.dailyGoal,
+  });
 
-  final List<WeightHistoryEntry> entries;
+  final List<double> weekData;
+  final double dailyGoal;
 
   @override
   Widget build(BuildContext context) {
-    final reversed = entries.toList().reversed.toList();
-    final hasData = reversed.length >= 2;
-    final minWeight = hasData
-        ? reversed.map((e) => e.weightKg).reduce((a, b) => a < b ? a : b) - 1
-        : 0.0;
-    final maxWeight = hasData
-        ? reversed.map((e) => e.weightKg).reduce((a, b) => a > b ? a : b) + 1
-        : 1.0;
+    final totalSteps = weekData.reduce((a, b) => a + b);
+    final activeDays = weekData.where((v) => v > 0).length;
+    final avgSteps = activeDays == 0 ? 0 : (totalSteps / activeDays).round();
+    final hasAnyData = weekData.any((value) => value > 0);
+    final maxY = dailyGoal > 0 ? (dailyGoal * 1.25).clamp(4000.0, 20000.0) : 10000.0;
 
     return InfoCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('ওজনের ধারা', style: AppTextStyles.cardTitle),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 160,
-            child: hasData
-                ? LineChart(
-                    LineChartData(
-                      minY: minWeight,
-                      maxY: maxWeight,
-                      gridData: FlGridData(
-                        show: true,
-                        drawVerticalLine: false,
-                        getDrawingHorizontalLine: (value) =>
-                            FlLine(color: AppColors.border, strokeWidth: 1),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('হাঁটার ধারা (স্টেপ চার্ট)', style: AppTextStyles.cardTitle),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.bluePale,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.directions_walk_rounded, color: AppColors.blue, size: 14),
+                    const SizedBox(width: 4),
+                    Text(
+                      'টার্গেট: ${BengaliFormatters.toBengaliNumber(dailyGoal.round())}',
+                      style: AppTextStyles.caption.copyWith(
+                        color: AppColors.blue,
+                        fontWeight: FontWeight.bold,
                       ),
-                      borderData: FlBorderData(show: false),
-                      titlesData: FlTitlesData(
-                        leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                        bottomTitles: AxisTitles(
-                          sideTitles: SideTitles(
-                            showTitles: true,
-                            getTitlesWidget: (value, meta) {
-                              final index = value.toInt();
-                              if (index < 0 || index >= reversed.length) {
-                                return const SizedBox.shrink();
-                              }
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8),
-                                child: Text(reversed[index].dateKey.substring(5), style: AppTextStyles.caption),
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      lineBarsData: [
-                        LineChartBarData(
-                          isCurved: true,
-                          color: AppColors.primary,
-                          barWidth: 3,
-                          spots: List.generate(
-                            reversed.length,
-                            (index) => FlSpot(index.toDouble(), reversed[index].weightKg),
-                          ),
-                          dotData: FlDotData(
-                            show: true,
-                            getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
-                              radius: 4,
-                              color: AppColors.primary,
-                              strokeWidth: 2,
-                              strokeColor: AppColors.white,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
-                  )
-                : Center(
-                    child: Text(
-                      'ওজন ট্র্যাকিং শুরু হলে এখানে চার্ট দেখাবে।',
-                      style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _StepChartStat(
+                  label: 'মোট স্টেপ',
+                  value: BengaliFormatters.toBengaliNumber(totalSteps.round()),
+                  icon: Icons.analytics_rounded,
+                  color: AppColors.primary,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _StepChartStat(
+                  label: 'দৈনিক গড়',
+                  value: BengaliFormatters.toBengaliNumber(avgSteps),
+                  icon: Icons.moving_rounded,
+                  color: AppColors.blue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            height: 180,
+            child: LineChart(
+              LineChartData(
+                minY: 0,
+                maxY: maxY,
+                gridData: FlGridData(
+                  show: true,
+                  drawVerticalLine: false,
+                  getDrawingHorizontalLine: (value) => FlLine(
+                    color: AppColors.border,
+                    strokeWidth: 1,
+                  ),
+                ),
+                borderData: FlBorderData(show: false),
+                extraLinesData: dailyGoal > 0
+                    ? ExtraLinesData(
+                        horizontalLines: [
+                          HorizontalLine(
+                            y: dailyGoal,
+                            color: AppColors.blue.withValues(alpha: 0.35),
+                            dashArray: [5, 4],
+                            strokeWidth: 1.4,
+                          ),
+                        ],
+                      )
+                    : const ExtraLinesData(),
+                titlesData: FlTitlesData(
+                  leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                  bottomTitles: AxisTitles(
+                    sideTitles: SideTitles(
+                      showTitles: true,
+                      getTitlesWidget: (value, meta) {
+                        const days = ['সো', 'মঙ্গ', 'বুধ', 'বৃহ', 'শু', 'শনি', 'রবি'];
+                        final idx = value.toInt();
+                        if (idx < 0 || idx >= 7) {
+                          return const SizedBox.shrink();
+                        }
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 8),
+                          child: Text(days[idx], style: AppTextStyles.caption),
+                        );
+                      },
                     ),
                   ),
+                ),
+                lineBarsData: [
+                  LineChartBarData(
+                    isCurved: true,
+                    spots: List.generate(
+                      weekData.length,
+                      (index) => FlSpot(index.toDouble(), weekData[index]),
+                    ),
+                    color: AppColors.blue,
+                    barWidth: 3,
+                    belowBarData: BarAreaData(
+                      show: true,
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          AppColors.blue.withValues(alpha: 0.35),
+                          AppColors.blue.withValues(alpha: 0.02),
+                        ],
+                      ),
+                    ),
+                    dotData: FlDotData(
+                      show: true,
+                      getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                        radius: 4,
+                        color: AppColors.blue,
+                        strokeWidth: 2,
+                        strokeColor: AppColors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (!hasAnyData) ...[
+            const SizedBox(height: 12),
+            Center(
+              child: Text(
+                'এখনো কোনো হাঁটার ডেটা নেই। অ্যাক্টিভিটি ট্র্যাকিং চালু রেখে হাঁটুন।',
+                style: AppTextStyles.body.copyWith(color: AppColors.textMuted),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _StepChartStat extends StatelessWidget {
+  const _StepChartStat({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 16),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: AppTextStyles.caption.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 2),
+                Text(
+                  value,
+                  style: AppTextStyles.bodyLarge.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
