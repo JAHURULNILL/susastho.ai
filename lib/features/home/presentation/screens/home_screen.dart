@@ -13,7 +13,6 @@ import '../../../../data/models/daily_summary.dart';
 import '../../../../data/models/doctor_note.dart';
 import '../../../../data/models/food_analysis_result.dart';
 import '../../../../data/models/health_metrics.dart';
-import '../../../../data/models/wellness_snapshot.dart';
 import '../../../../data/models/weekly_plan.dart';
 import '../../../../shared/providers/app_state_provider.dart';
 import '../../../planner/providers/planner_provider.dart';
@@ -34,17 +33,15 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(userProfileProvider);
-    final profile = profileAsync.valueOrNull;
-    final settings = ref.watch(appSettingsProvider).valueOrNull ?? const AppSettings();
-    final summary = ref.watch(dailySummaryProvider).valueOrNull ??
+    final profile = profileAsync.value;
+    final settings = ref.watch(appSettingsProvider).value ?? const AppSettings();
+    final summary = ref.watch(dailySummaryProvider).value ??
         const DailySummary(dateKey: '', meals: [], waterGlasses: 0);
-    final exercises = ref.watch(todayExercisesProvider).valueOrNull ?? const <WeeklyExerciseItem>[];
-    final note = ref.watch(activeDoctorNoteProvider).valueOrNull;
-    final todaySteps = ref.watch(todayStepsProvider).valueOrNull;
-    final todaySleep = ref.watch(todaySleepProvider).valueOrNull;
-    final weeklyCalories = ref.watch(weeklyCaloriesProvider).valueOrNull ?? const <String, double>{};
-    final wellness = ref.watch(wellnessSnapshotProvider).valueOrNull;
-    final queuedItems = ref.watch(offlineQueueCountProvider).valueOrNull ?? 0;
+    final exercises = ref.watch(todayExercisesProvider).value ?? const <WeeklyExerciseItem>[];
+    final note = ref.watch(activeDoctorNoteProvider).value;
+    final todaySteps = ref.watch(todayStepsProvider).value;
+    final todaySleep = ref.watch(todaySleepProvider).value;
+    final queuedItems = ref.watch(offlineQueueCountProvider).value ?? 0;
 
     if (profileAsync.isLoading && profile == null) {
       return const _HomeLoadingView();

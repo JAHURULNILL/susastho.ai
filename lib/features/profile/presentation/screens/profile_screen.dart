@@ -37,11 +37,11 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final profile = ref.watch(userProfileProvider).valueOrNull;
-    final settings = ref.watch(appSettingsProvider).valueOrNull ?? const AppSettings();
-    final sleep = ref.watch(todaySleepProvider).valueOrNull;
-    final steps = ref.watch(todayStepsProvider).valueOrNull;
-    final weightHistory = ref.watch(weightHistoryProvider).valueOrNull ?? const <WeightHistoryEntry>[];
+    final profile = ref.watch(userProfileProvider).value;
+    final settings = ref.watch(appSettingsProvider).value ?? const AppSettings();
+    final sleep = ref.watch(todaySleepProvider).value;
+    final steps = ref.watch(todayStepsProvider).value;
+    final weightHistory = ref.watch(weightHistoryProvider).value ?? const <WeightHistoryEntry>[];
 
     if (profile == null) {
       return const Center(
