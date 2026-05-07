@@ -266,110 +266,100 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
             ),
           ),
           const SizedBox(height: 18),
-          ...state.availableConditions.map((condition) {
-            final isSelected = state.conditions.contains(condition);
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 250),
-              curve: Curves.easeInOut,
-              margin: const EdgeInsets.only(bottom: 12),
+          GestureDetector(
+            onTap: () => _showConditionsBottomSheet(context, state),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.primaryPale : Colors.white,
-                borderRadius: BorderRadius.circular(22),
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
-                  color: isSelected ? AppColors.primaryLight : AppColors.border.withValues(alpha: 0.8),
-                  width: isSelected ? 2.0 : 1.5,
+                  color: state.conditions.isNotEmpty ? AppColors.primaryLight : AppColors.border,
+                  width: state.conditions.isNotEmpty ? 2.0 : 1.5,
                 ),
                 boxShadow: [
-                  if (isSelected)
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.08),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4),
-                    )
-                  else
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.02),
-                      blurRadius: 6,
-                      offset: const Offset(0, 2),
-                    ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.03),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
-              child: Material(
-                color: Colors.transparent,
-                child: InkWell(
-                  onTap: () {
-                    ref.read(onboardingProvider.notifier).toggleCondition(condition);
-                    _scrollToBottom();
-                  },
-                  borderRadius: BorderRadius.circular(22),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                    child: Row(
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: state.conditions.isNotEmpty ? AppColors.primaryPale : AppColors.pageBg,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.favorite_rounded,
+                      color: state.conditions.isNotEmpty ? AppColors.primary : AppColors.textMuted,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.all(10),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary.withValues(alpha: 0.15) : AppColors.pageBg,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Text(
-                            condition.emoji,
-                            style: const TextStyle(fontSize: 20),
-                          ),
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                condition.labelBn,
-                                style: TextStyle(
-                                  color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 15,
-                                ),
+                        Text(
+                          'আপনার কি কোনো শারীরিক समस्या আছে?',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textPrimary,
                               ),
-                              const SizedBox(height: 3),
-                              Text(
-                                condition.descriptionBn,
-                                style: TextStyle(
-                                  color: isSelected ? AppColors.primary.withValues(alpha: 0.8) : AppColors.textSecondary,
-                                  fontSize: 11.5,
+                        ),
+                        const SizedBox(height: 4),
+                        if (state.conditions.isEmpty)
+                          Text(
+                            'ডায়াবেটিস, প্রেশার, গ্যাস্ট্রিক ইত্যাদি নির্বাচন করতে চাপুন',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: AppColors.textSecondary,
                                   fontWeight: FontWeight.w500,
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primaryLight : Colors.transparent,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: isSelected ? AppColors.primaryLight : AppColors.textMuted.withValues(alpha: 0.4),
-                              width: 2,
+                          )
+                        else
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Wrap(
+                              spacing: 6,
+                              runSpacing: 6,
+                              children: state.conditions.map((condition) {
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primaryPale,
+                                    borderRadius: BorderRadius.circular(100),
+                                    border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Text(
+                                    '${condition.emoji} ${condition.labelBn}',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 11,
+                                        ),
+                                  ),
+                                );
+                              }).toList(),
                             ),
                           ),
-                          child: isSelected
-                              ? const Icon(
-                                  Icons.check_rounded,
-                                  size: 15,
-                                  color: Colors.white,
-                                )
-                              : null,
-                        ),
                       ],
                     ),
                   ),
-                ),
+                  const SizedBox(width: 8),
+                  const Icon(
+                    Icons.arrow_forward_ios_rounded,
+                    color: AppColors.textMuted,
+                    size: 14,
+                  ),
+                ],
               ),
-            );
-          }),
+            ),
+          ),
           const SizedBox(height: 24),
           _ProfilePreviewCard(state: state),
           const SizedBox(height: 24),
@@ -380,6 +370,193 @@ class _OnboardingChatScreenState extends ConsumerState<OnboardingChatScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  void _showConditionsBottomSheet(BuildContext context, OnboardingState state) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(28),
+          topRight: Radius.circular(28),
+        ),
+      ),
+      builder: (context) {
+        return Consumer(
+          builder: (context, ref, child) {
+            final currentState = ref.watch(onboardingProvider);
+            return Container(
+              constraints: BoxConstraints(
+                maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+              ),
+              padding: EdgeInsets.fromLTRB(24, 24, 24, 24 + MediaQuery.viewPaddingOf(context).bottom),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.red.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.favorite_rounded, color: AppColors.red, size: 22),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'শারীরিক সমস্যা নির্বাচন করুন',
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                color: AppColors.textPrimary,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    'আপনার কোনো ক্রনিক বা সাধারণ সমস্যা থাকলে এখান থেকে বেছে নিন। একাধিক নির্বাচন করা যাবে।',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontSize: 12,
+                        ),
+                  ),
+                  const SizedBox(height: 20),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: currentState.availableConditions.length,
+                      itemBuilder: (context, index) {
+                        final condition = currentState.availableConditions[index];
+                        final isSelected = currentState.conditions.contains(condition);
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            decoration: BoxDecoration(
+                              color: isSelected 
+                                  ? AppColors.primaryPale 
+                                  : AppColors.white,
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: isSelected ? AppColors.primaryLight : AppColors.border,
+                                width: isSelected ? 2.0 : 1.5,
+                              ),
+                              boxShadow: [
+                                if (isSelected)
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  )
+                                else
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.01),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 2),
+                                  ),
+                              ],
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              child: InkWell(
+                                onTap: () {
+                                  ref.read(onboardingProvider.notifier).toggleCondition(condition);
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                                  child: Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: isSelected 
+                                              ? AppColors.primary.withValues(alpha: 0.15) 
+                                              : AppColors.pageBg,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Text(
+                                          condition.emoji,
+                                          style: const TextStyle(fontSize: 18),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 14),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              condition.labelBn,
+                                              style: TextStyle(
+                                                color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14.5,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 2),
+                                            Text(
+                                              condition.descriptionBn,
+                                              style: TextStyle(
+                                                color: isSelected ? AppColors.primary.withValues(alpha: 0.8) : AppColors.textSecondary,
+                                                fontSize: 11.5,
+                                                fontWeight: FontWeight.w500,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        width: 22,
+                                        height: 22,
+                                        decoration: BoxDecoration(
+                                          color: isSelected ? AppColors.primaryLight : Colors.transparent,
+                                          shape: BoxShape.circle,
+                                          border: Border.all(
+                                            color: isSelected ? AppColors.primaryLight : AppColors.textMuted.withValues(alpha: 0.4),
+                                            width: 2,
+                                          ),
+                                        ),
+                                        child: isSelected
+                                            ? const Icon(
+                                                Icons.check_rounded,
+                                                size: 14,
+                                                color: Colors.white,
+                                              )
+                                            : null,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  PrimaryButton(
+                    label: 'ঠিক আছে',
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icons.check_circle_outline_rounded,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 

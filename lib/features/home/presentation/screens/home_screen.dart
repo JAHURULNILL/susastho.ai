@@ -34,17 +34,17 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profileAsync = ref.watch(userProfileProvider);
-    final profile = profileAsync.asData?.value;
-    final settings = ref.watch(appSettingsProvider).asData?.value ?? const AppSettings();
-    final summary = ref.watch(dailySummaryProvider).asData?.value ??
+    final profile = profileAsync.valueOrNull;
+    final settings = ref.watch(appSettingsProvider).valueOrNull ?? const AppSettings();
+    final summary = ref.watch(dailySummaryProvider).valueOrNull ??
         const DailySummary(dateKey: '', meals: [], waterGlasses: 0);
-    final exercises = ref.watch(todayExercisesProvider).asData?.value ?? const <WeeklyExerciseItem>[];
-    final note = ref.watch(activeDoctorNoteProvider).asData?.value;
-    final todaySteps = ref.watch(todayStepsProvider).asData?.value;
-    final todaySleep = ref.watch(todaySleepProvider).asData?.value;
-    final weeklyCalories = ref.watch(weeklyCaloriesProvider).asData?.value ?? const <String, double>{};
-    final wellness = ref.watch(wellnessSnapshotProvider).asData?.value;
-    final queuedItems = ref.watch(offlineQueueCountProvider).asData?.value ?? 0;
+    final exercises = ref.watch(todayExercisesProvider).valueOrNull ?? const <WeeklyExerciseItem>[];
+    final note = ref.watch(activeDoctorNoteProvider).valueOrNull;
+    final todaySteps = ref.watch(todayStepsProvider).valueOrNull;
+    final todaySleep = ref.watch(todaySleepProvider).valueOrNull;
+    final weeklyCalories = ref.watch(weeklyCaloriesProvider).valueOrNull ?? const <String, double>{};
+    final wellness = ref.watch(wellnessSnapshotProvider).valueOrNull;
+    final queuedItems = ref.watch(offlineQueueCountProvider).valueOrNull ?? 0;
 
     if (profileAsync.isLoading && profile == null) {
       return const _HomeLoadingView();
@@ -64,8 +64,11 @@ class HomeScreen extends ConsumerWidget {
     final burned = exercises
         .where((item) => item.completed)
         .fold<double>(0, (sum, item) => sum + item.caloriesBurned);
-    final netCalories = summary.consumedMacros.calories - burned;
-    final streak = wellness?.calorieStreakDays ?? _calculateStreak(weeklyCalories, targetCalories);
+    final stepBurned = todaySteps != null
+        ? (todaySteps.activeCalories > 0 ? todaySteps.activeCalories : todaySteps.steps * 0.04)
+        : 0.0;
+    final totalBurned = burned + stepBurned;
+    final netCalories = summary.consumedMacros.calories - totalBurned;
     final instantAdvice = _buildInstantAdvice(
       profile: profile,
       summary: summary,
@@ -129,12 +132,14 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _QuickStatCard(
-                  label: 'স্ট্রিক',
-                  value: streak == 0 ? '—' : BengaliFormatters.toBengaliNumber(streak),
-                  sublabel: streak == 0 ? 'শুরু হয়নি' : 'দিন',
-                  background: AppColors.amberPale,
+                  label: 'ক্যালরি খরচ',
+                  value: totalBurned == 0
+                      ? '০'
+                      : BengaliFormatters.toBengaliNumber(totalBurned.round()),
+                  sublabel: 'kcal',
+                  background: const Color(0xFFFFF3F0),
                   icon: Icons.local_fire_department_rounded,
-                  accent: AppColors.amber,
+                  accent: const Color(0xFFFF6B4A),
                 ),
               ),
             ],
@@ -145,10 +150,6 @@ class HomeScreen extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
           _FastingCard(settings: settings),
-          if (wellness != null) ...[
-            const SizedBox(height: 14),
-            _AchievementCard(snapshot: wellness),
-          ],
           if (queuedItems > 0) ...[
             const SizedBox(height: 14),
             _OfflineQueueCard(count: queuedItems),
@@ -223,7 +224,73 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _DoctorNoteCard extends StatelessWidget {\n  const _DoctorNoteCard({\n    required this.note,\n    required this.instantAdvice,\n  });\n\n  final DoctorNoteRecord? note;\n  final String instantAdvice;\n\n  @override\n  Widget build(BuildContext context) {\n    return Container(\n      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),\n      decoration: BoxDecoration(\n        color: AppColors.primaryFaint,\n        borderRadius: BorderRadius.circular(20),\n        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),\n      ),\n      child: Row(\n        crossAxisAlignment: CrossAxisAlignment.center,\n        children: [\n          Container(\n            padding: const EdgeInsets.all(8),\n            decoration: const BoxDecoration(\n              color: AppColors.white,\n              shape: BoxShape.circle,\n              boxShadow: [\n                BoxShadow(\n                  color: Color.fromRGBO(0, 0, 0, 0.05),\n                  blurRadius: 4,\n                  offset: Offset(0, 2),\n                ),\n              ],\n            ),\n            child: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 18),\n          ),\n          const SizedBox(width: 14),\n          Expanded(\n            child: Text(\n              note?.content ?? instantAdvice,\n              maxLines: 2,\n              overflow: TextOverflow.ellipsis,\n              style: AppTextStyles.body.copyWith(\n                color: AppColors.textPrimary,\n                fontWeight: FontWeight.w500,\n                fontSize: 13,\n                height: 1.4,\n              ),\n            ),\n          ),\n        ],\n      ),\n    );\n  }\n}\n\nclass _QuickStatCard extends StatelessWidget {
+class _DoctorNoteCard extends StatelessWidget {
+  const _DoctorNoteCard({
+    required this.note,
+    required this.instantAdvice,
+  });
+
+  final DoctorNoteRecord? note;
+  final String instantAdvice;
+
+  String _cleanText(String text) {
+    // Remove emojis in specified unicode ranges
+    return text.replaceAll(
+      RegExp(r'[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E6}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{FE0F}\u{1F000}-\u{1F9FF}]', unicode: true),
+      '',
+    ).trim();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final rawText = note?.content ?? instantAdvice;
+    final cleanedText = _cleanText(rawText);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.primaryFaint,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            margin: const EdgeInsets.only(top: 2),
+            padding: const EdgeInsets.all(8),
+            decoration: const BoxDecoration(
+              color: AppColors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Color.fromRGBO(0, 0, 0, 0.05),
+                  blurRadius: 4,
+                  offset: Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.auto_awesome_rounded, color: AppColors.primary, size: 18),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              cleanedText,
+              style: AppTextStyles.body.copyWith(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                height: 1.45,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickStatCard extends StatelessWidget {
   const _QuickStatCard({
     required this.label,
     required this.value,
@@ -379,16 +446,6 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
           ),
           const SizedBox(height: 14),
           if (!settings.fastingEnabled || startedAt == null) ...[
-                  style: AppTextStyles.caption.copyWith(
-                    color: settings.fastingEnabled ? AppColors.primary : AppColors.textMuted,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          if (!settings.fastingEnabled || startedAt == null) ...[
             PrimaryButton(
               label: 'ফাস্টিং শুরু করুন',
               onPressed: () => _setStartedAt(DateTime.now()),
@@ -432,35 +489,37 @@ class _FastingCardState extends ConsumerState<_FastingCard> {
                 Expanded(
                   child: _FastingMetric(
                     title: 'বাকি আছে',
+                    value: _formatDuration(remaining),
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _pickWindow,
-              child: Text('${BengaliFormatters.toBengaliNumber(settings.fastingWindowHours)} ঘণ্টার উইন্ডো'),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _pickWindow,
+                    child: Text('${BengaliFormatters.toBengaliNumber(settings.fastingWindowHours)} ঘণ্টার উইন্ডো'),
+                  ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () async {
-                    await ref.read(appSettingsProvider.notifier).save(
-                          settings.copyWith(
-                            fastingEnabled: false,
-                            clearFastingStartedAt: true,
-                          ),
-                        );
-                  },
-                child: const Text('বন্ধ করুন'),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      await ref.read(appSettingsProvider.notifier).save(
+                            settings.copyWith(
+                              fastingEnabled: false,
+                              clearFastingStartedAt: true,
+                            ),
+                          );
+                    },
+                    child: const Text('বন্ধ করুন'),
+                  ),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -871,88 +930,6 @@ class _WaterTrackerCard extends ConsumerWidget {
               height: 1.45,
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AchievementCard extends StatelessWidget {
-  const _AchievementCard({required this.snapshot});
-
-  final WellnessSnapshot snapshot;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: AppColors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppColors.border),
-        boxShadow: const [
-          BoxShadow(
-            color: Color.fromRGBO(15, 38, 27, 0.04),
-            blurRadius: 6,
-            offset: Offset(0, 2),
-          ),
-          BoxShadow(
-            color: Color.fromRGBO(45, 106, 79, 0.09),
-            blurRadius: 20,
-            spreadRadius: -8,
-            offset: Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text('এই সপ্তাহের অগ্রগতি', style: AppTextStyles.cardTitle),
-              const Spacer(),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: AppColors.primaryFaint,
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text(
-                  '${BengaliFormatters.toBengaliNumber(snapshot.activeDays)} দিন active',
-                  style: AppTextStyles.caption.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          if (snapshot.achievements.isNotEmpty)
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: snapshot.achievements
-                  .map(
-                    (item) => Container(
-                      constraints: const BoxConstraints(minWidth: 140, maxWidth: 240),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.primaryFaint,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('${item.emoji} ${item.title}', style: AppTextStyles.bodyLarge),
-                          const SizedBox(height: 4),
-                          Text(item.subtitle, style: AppTextStyles.caption),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
-            ),
         ],
       ),
     );

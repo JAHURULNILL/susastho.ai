@@ -45,14 +45,15 @@ class GreetingHeader extends StatelessWidget {
                 text: '$greeting, ',
                 style: AppTextStyles.bodyLarge.copyWith(
                   color: AppColors.textSecondary,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w400,
                 ),
               ),
               TextSpan(
                 text: shortName,
                 style: AppTextStyles.screenTitle.copyWith(
+                  color: AppColors.primary,
                   fontSize: 26,
-                  fontWeight: FontWeight.w600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],

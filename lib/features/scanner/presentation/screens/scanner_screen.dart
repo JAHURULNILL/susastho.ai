@@ -92,13 +92,35 @@ class _ScannerScreenState extends ConsumerState<ScannerScreen> {
   Widget build(BuildContext context) {
     ref.listen(scannerProvider, (previous, next) {
       if (next.result != null && previous?.result != next.result) {
-        showModalBottomSheet<void>(
+        showDialog<void>(
           context: context,
-          isScrollControlled: true,
-          backgroundColor: Colors.transparent,
-          builder: (_) => FoodResultBottomSheet(
-            result: next.result!,
-            imagePath: next.image?.path,
+          barrierDismissible: true,
+          builder: (_) => Dialog(
+            backgroundColor: Colors.transparent,
+            insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+            child: Container(
+              decoration: BoxDecoration(
+                color: AppColors.white,
+                borderRadius: BorderRadius.circular(28),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color.fromRGBO(0, 0, 0, 0.15),
+                    blurRadius: 32,
+                    offset: Offset(0, 12),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.sizeOf(context).height * 0.82,
+                ),
+                child: FoodResultBottomSheet(
+                  result: next.result!,
+                  imagePath: next.image?.path,
+                ),
+              ),
+            ),
           ),
         );
       }

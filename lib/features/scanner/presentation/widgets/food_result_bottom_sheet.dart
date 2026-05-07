@@ -29,20 +29,20 @@ class FoodResultBottomSheet extends ConsumerWidget {
     final scoreColor = _scoreColor;
     final scoreBackground = _scoreBackground;
 
-    return SafeArea(
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).cardTheme.color ?? AppColors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
-        ),
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardTheme.color ?? AppColors.white,
+        borderRadius: BorderRadius.circular(28),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 16, 4),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Container(
                   width: 46,
                   height: 5,
                   decoration: BoxDecoration(
@@ -50,20 +50,34 @@ class FoodResultBottomSheet extends ConsumerWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              if (image != null && image.existsSync()) ...[
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: Image.file(
-                    image,
-                    width: double.infinity,
-                    height: 220,
-                    fit: BoxFit.cover,
-                  ),
+                IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: AppColors.textSecondary),
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                  splashRadius: 20,
                 ),
-                const SizedBox(height: 18),
               ],
+            ),
+          ),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (image != null && image.existsSync()) ...[
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.file(
+                        image,
+                        width: double.infinity,
+                        height: 220,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                  ],
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -171,28 +185,162 @@ class FoodResultBottomSheet extends ConsumerWidget {
                   ),
                 ],
               ),
+              // --- BENEFITS (UPOKARITA) ---
               if (result.pros.isNotEmpty) ...[
                 const SizedBox(height: 18),
-                Text('উপকারিতা', style: AppTextStyles.cardTitle),
+                Text('উপকারিতা ও পুষ্টিগুণ', style: AppTextStyles.cardTitle),
                 const SizedBox(height: 10),
                 ...result.pros.map((item) => _LineItem(text: item, color: AppColors.primary)),
               ],
-              if (result.warnings.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text('সতর্কতা', style: AppTextStyles.cardTitle),
+
+              // --- VITAMINS & MINERALS CAPSULES CHIPS ---
+              if (result.vitamins.isNotEmpty || result.minerals.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Text('ভিটামিন ও খনিজ উপাদান', style: AppTextStyles.cardTitle),
                 const SizedBox(height: 10),
-                ...result.warnings.map((item) => _LineItem(text: item, color: AppColors.red)),
-              ],
-              if (result.redFlags.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                _InsightCard(
-                  title: 'রিয়েল-টাইম সতর্কতা',
-                  body: result.redFlags.join('\n'),
-                  backgroundColor: AppColors.redPale,
-                  borderColor: AppColors.red,
-                  icon: Icons.warning_amber_rounded,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    ...result.vitamins.map((item) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE0F2FE),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0xFFBAE6FD)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.wb_sunny_rounded, color: Color(0xFF0284C7), size: 14),
+                              const SizedBox(width: 6),
+                              Text(
+                                item,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: const Color(0xFF0369A1),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                    ...result.minerals.map((item) => Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFEF3C7),
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: const Color(0xFFFDE68A)),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.blur_on_rounded, color: Color(0xFFD97706), size: 14),
+                              const SizedBox(width: 6),
+                              Text(
+                                item,
+                                style: AppTextStyles.caption.copyWith(
+                                  color: const Color(0xFF92400E),
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )),
+                  ],
                 ),
               ],
+
+              // --- HEALTH WARNING / SHARIRIK KHOTI WARNINGS CARD (⚠️ ক্ষতিকর সতর্কতা) ---
+              if (result.healthScore < 60 || result.warnings.isNotEmpty || result.redFlags.isNotEmpty) ...[
+                const SizedBox(height: 18),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF1F2),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFFECDD3), width: 1.5),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color.fromRGBO(244, 63, 94, 0.04),
+                        blurRadius: 10,
+                        offset: Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.warning_amber_rounded, color: Color(0xFFE11D48), size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Text(
+                              '⚠️ ক্ষতিকর সতর্কতা ও স্বাস্থ্যের ক্ষতি',
+                              style: AppTextStyles.cardTitle.copyWith(
+                                color: const Color(0xFF9F1239),
+                                fontSize: 16,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      ...[
+                        ...result.redFlags,
+                        ...result.warnings,
+                      ].map((warn) => Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text('• ', style: TextStyle(color: Color(0xFFE11D48), fontSize: 16, fontWeight: FontWeight.bold)),
+                                Expanded(
+                                  child: Text(
+                                    warn,
+                                    style: AppTextStyles.body.copyWith(
+                                      color: const Color(0xFF881337),
+                                      height: 1.35,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                      if (result.alternative != null && result.alternative!.isNotEmpty) ...[
+                        const Divider(color: Color(0xFFFDA4AF), height: 24, thickness: 1),
+                        Row(
+                          children: [
+                            const Icon(Icons.eco_rounded, color: Color(0xFF15803D), size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'বিকল্প স্বাস্থ্যকর দেশী গ্রাম্য খাবার',
+                                style: AppTextStyles.cardTitle.copyWith(
+                                  color: const Color(0xFF166534),
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          result.alternative!,
+                          style: AppTextStyles.body.copyWith(
+                            color: const Color(0xFF1F2937),
+                            fontWeight: FontWeight.w500,
+                            height: 1.4,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
+              // --- ADDITIONAL INSIGHTS (PLATE BREAKDOWN, MENU, GROCERY, MEMORY) ---
               if (result.plateBreakdown.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
@@ -253,7 +401,7 @@ class FoodResultBottomSheet extends ConsumerWidget {
                   icon: Icons.health_and_safety_rounded,
                 ),
               ],
-              if ((result.alternative ?? '').isNotEmpty) ...[
+              if (result.healthScore >= 60 && (result.alternative ?? '').isNotEmpty) ...[
                 const SizedBox(height: 16),
                 _InsightCard(
                   title: 'স্বাস্থ্যকর বিকল্প',

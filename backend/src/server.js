@@ -172,7 +172,7 @@ ${recentMealText}
     } else if (mode === 'receipt') {
       prompt = `${base}\nইনপুটটি বাজার বা restaurant receipt।\n${description ? `User লিখেছে: "${description}"` : 'ছবি থেকে receipt পড়ে বোঝো।'}\nশুধু valid JSON:\n{"name":"বাজার বিশ্লেষণ","analysis_mode":"receipt","calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"score":0,"score_reason":"কারণ","benefits":["ভালো দিক"],"harms":["উন্নতি দরকার"],"receipt_insights":["insight"],"grocery_suggestions":["পরের বাজারে কিনুন"],"condition_advice":"condition advice","doctor_tip":"practical tip","alternative":"স্বাস্থ্যকর choice","budget_impact":"বাজেট insight"}`;
     } else {
-      prompt = `${base}\nইনপুটটি একটি খাবার বা mixed Bangladeshi plate।\n${description ? `User লিখেছে: "${description}"` : 'ছবি দেখে খাবার বিশ্লেষণ করো।'}\n${normalizedDescription && normalizedDescription !== description ? `normalized রূপ: "${normalizedDescription}"` : ''}\n${description ? 'description থাকলে সেটাকেই প্রধান input ধরে পূর্ণ nutrition analysis দেবে।' : ''}\nশুধু valid JSON:\n{"name":"খাবারের নাম","analysis_mode":"meal","calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"vitamins":["ভিটামিন"],"minerals":["মিনারেল"],"score":0,"score_reason":"সংক্ষিপ্ত কারণ","benefits":["উপকার ১","উপকার ২"],"harms":["সতর্কতা"],"red_flags":["condition-specific warning"],"plate_breakdown":["প্লেটের অংশ"],"condition_advice":"condition advice","memory_insight":"pattern insight","doctor_tip":"practical tip","timing_advice":"কোন সময়ে ভালো","portion_advice":"কতটুকু খাওয়া উচিত","alternative":"স্বাস্থ্যকর দেশীয় বিকল্প","best_choice":"সেরা অংশ","budget_impact":"বাজেট insight"}`;
+      prompt = `${base}\nইনপুটটি একটি খাবার বা mixed Bangladeshi plate।\n${description ? `User লিখেছে: "${description}"` : 'ছবি দেখে খাবার বিশ্লেষণ করো।'}\n${normalizedDescription && normalizedDescription !== description ? `normalized রূপ: "${normalizedDescription}"` : ''}\n${description ? 'description থাকলে সেটাকেই প্রধান input ধরে পূর্ণ nutrition analysis দেবে।' : ''}\nযদি খাবারটি অস্বাস্থ্যকর বা ক্ষতিকর হয় (score < 60), তবে "harms" ও "red_flags" এ অবশ্যই '⚠️ সতর্কবার্তা' এবং স্বাস্থ্যের কি কি ক্ষতি করে তা স্পষ্টভাবে উল্লেখ করবে। বিকল্প হিসেবে অবশ্যই সুনির্দিষ্ট দেশী গ্রাম্য স্বাস্থ্যকর খাবারের নাম ও সংক্ষেপে যুক্তি (alternative) দেবে।\nখাবারের ক্যালরি, ৫টি প্রধান ভিটামিন (vitamins) ও মিনারেলস (minerals) এবং উপকারিতা (benefits) স্পষ্টভাবে তালিকা করবে।\n\nশুধু valid JSON:\n{"name":"খাবারের নাম","analysis_mode":"meal","calories":0,"protein":0,"carbs":0,"fat":0,"fiber":0,"vitamins":["ভিটামিন ১","ভিটামিন ২"],"minerals":["মিনারেল ১","মিনারেল ২"],"score":0,"score_reason":"সংক্ষিপ্ত কারণ","benefits":["উপকার ১","উপকার ২"],"harms":["⚠️ সতর্কবার্তা"],"red_flags":["⚠️ ক্ষতিকর সতর্কবার্তা ও কারণ"],"plate_breakdown":["প্লেটের অংশ"],"condition_advice":"condition advice","memory_insight":"pattern insight","doctor_tip":"practical tip","timing_advice":"কোন সময়ে ভালো","portion_advice":"কতটুকু খাওয়া উচিত","alternative":"সুনির্দিষ্ট দেশী গ্রাম্য স্বাস্থ্যকর বিকল্প","best_choice":"সেরা অংশ","budget_impact":"বাজেট insight"}`;
     }
 
     const contentParts = [{ text: prompt }];
@@ -184,7 +184,7 @@ ${recentMealText}
       'তুমি একজন অভিজ্ঞ বাংলাদেশি ডাক্তার, পুষ্টিবিদ এবং local food intelligence specialist।',
       'সব response বাংলায় দেবে এবং valid JSON ছাড়া অন্য কিছু দেবে না।',
       'কোনো foreign dish, western replacement বা non-Bangladeshi example ব্যবহার করবে না।',
-      'রেসপন্স অত্যন্ত দ্রুত ও ফাস্ট করার জন্য প্রতিটি বিশ্লেষণ, পরামর্শ এবং বিবরণ অত্যন্ত সংক্ষিপ্ত, সুনির্দিষ্ট এবং ১-২ বাক্যের মধ্যে সীমাবদ্ধ রাখবে। অপ্রয়োজনীয় ব্যাখ্যা বা দীর্ঘ আলোচনা বর্জন করবে।',
+      'রেসপন্স অত্যন্ত দ্রুত ও ফাস্ট করার জন্য প্রতিটি বিশ্লেষণ, পরামর্শ এবং বিবরণ অত্যন্ত সংক্ষিপ্ত, সুনির্দিষ্ট এবং ১টি বাক্যের মধ্যে সীমাবদ্ধ রাখবে। অপ্রয়োজনীয় ব্যাখ্যা বা দীর্ঘ আলোচনা বর্জন করবে।',
     ].join(' ');
 
     const payload = await geminiCall(prompt, { parts: contentParts, temperature: 0.2, systemInstruction });
@@ -235,7 +235,7 @@ app.post('/api/doctor-note', async (req, res) => {
 শুধু valid JSON:
 {"content":"১-২ বাক্যের উষ্ণ, সংক্ষিপ্ত নির্দিষ্ট পরামর্শ","category":"${category}","contextSnapshot":{"timeOfDay":"${timeOfDay}","dayOfWeek":"${dayOfWeek}","totalCal":${todayData.totalCal || 0},"waterLog":${todayData.waterLog || 0},"exerciseDone":${todayData.exerciseDone || 0}}}
 
-নিয়ম: ${profile.name} নাম ১বার ব্যবহার করবে, রেসপন্স অত্যন্ত দ্রুত পাওয়ার জন্য পরামর্শটি সর্বোচ্চ ১-২ বাক্যের মধ্যে রাখবে, generic advice নয়, calm premium tone, বাংলায়।`;
+নিয়ম: ${profile.name} নাম ১বার ব্যবহার করবে, রেসপন্স অত্যন্ত দ্রুত পাওয়ার জন্য পরামর্শটি সর্বোচ্চ ১-২ বাক্যের মধ্যে রাখবে, কোনো প্রকার ইমোজি (emojis) ব্যবহার করবে না, generic advice নয়, calm premium tone, বাংলায়।`;
 
     const payload = await geminiCall(prompt, { temperature: 0.35 });
     const parsed = safeJsonParse(extractText(payload));

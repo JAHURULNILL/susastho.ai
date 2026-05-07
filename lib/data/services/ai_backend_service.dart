@@ -70,6 +70,8 @@ class AiBackendService {
         if (_apiKey.isNotEmpty) 'x-api-key': _apiKey,
       },
       body: jsonEncode(payload),
+      maxRetries: 1,
+      timeout: const Duration(seconds: 8),
     );
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -168,7 +170,13 @@ class AiBackendService {
     return Map<String, dynamic>.from(jsonDecode(response.body) as Map);
   }
 
-  Future<http.Response> _postWithRetry(Uri uri, {required Map<String, String> headers, required String body, int maxRetries = 3}) async {
+  Future<http.Response> _postWithRetry(
+    Uri uri, {
+    required Map<String, String> headers,
+    required String body,
+    int maxRetries = 3,
+    Duration timeout = const Duration(seconds: 30),
+  }) async {
     int attempts = 0;
     while (attempts < maxRetries) {
       try {
@@ -176,14 +184,14 @@ class AiBackendService {
           uri,
           headers: headers,
           body: body,
-        ).timeout(const Duration(seconds: 30));
+        ).timeout(timeout);
         return response;
       } catch (e) {
         attempts++;
         if (attempts >= maxRetries) {
           throw Exception('Failed after $maxRetries attempts: $e');
         }
-        await Future.delayed(Duration(seconds: 2 * attempts)); // Exponential backoff
+        await Future.delayed(Duration(seconds: 1 * attempts)); // Exponential backoff
       }
     }
     throw Exception('Failed to execute request');

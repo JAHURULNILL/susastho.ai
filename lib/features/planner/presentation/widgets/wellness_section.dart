@@ -1389,12 +1389,12 @@ class _NoFapSheet extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                     decoration: BoxDecoration(
                       color: isDone 
-                          ? Colors.emerald.withValues(alpha: 0.12)
+                          ? Colors.green.withValues(alpha: 0.12)
                           : Colors.amber.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(100),
                       border: Border.all(
                         color: isDone 
-                            ? Colors.emerald.withValues(alpha: 0.3)
+                            ? Colors.green.withValues(alpha: 0.3)
                             : Colors.amber.withValues(alpha: 0.3),
                       ),
                     ),
@@ -1403,7 +1403,7 @@ class _NoFapSheet extends StatelessWidget {
                       children: [
                         Icon(
                           isDone ? Icons.check_circle_rounded : Icons.pending_actions_rounded,
-                          color: isDone ? Colors.emerald : Colors.amber,
+                          color: isDone ? Colors.green : Colors.amber,
                           size: 18,
                         ),
                         const SizedBox(width: 8),
@@ -1412,7 +1412,7 @@ class _NoFapSheet extends StatelessWidget {
                               ? 'আজকের দিন সফলভাবে চেক-ইন হয়েছে!' 
                               : 'আত্মসংযম আজ সফলভাবে চলছে...',
                           style: AppTextStyles.caption.copyWith(
-                            color: isDone ? Colors.emerald : Colors.amber,
+                            color: isDone ? Colors.green : Colors.amber,
                             fontWeight: FontWeight.bold,
                           ),
                         ),

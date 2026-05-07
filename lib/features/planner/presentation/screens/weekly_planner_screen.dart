@@ -156,63 +156,31 @@ class _PlanHeroCard extends StatelessWidget {
     final fatTarget = (profile.dailyCalorieTarget * 0.25 / 9).round();
 
     return Container(
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F2E1E), Color(0xFF1A4931), Color(0xFF286E49)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(28),
+        color: const Color(0xFFF1F7F4),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFDCECE4)),
         boxShadow: const [
           BoxShadow(
-            color: Color.fromRGBO(15, 46, 30, 0.15),
-            blurRadius: 24,
-            spreadRadius: -4,
-            offset: Offset(0, 12),
+            color: Color.fromRGBO(27, 94, 59, 0.03),
+            blurRadius: 12,
+            offset: Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(99),
-                ),
-                child: Text(
-                  'নিউট্রিশন গোল',
-                  style: AppTextStyles.caption.copyWith(
-                    color: const Color(0xFF81C784),
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
           Text(
             'আপনার জন্য এই সপ্তাহের খাবার পরিকল্পনা',
             style: AppTextStyles.screenTitle.copyWith(
-              color: AppColors.white,
-              fontSize: 22,
+              color: AppColors.textPrimary,
+              fontSize: 18,
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 10),
-          Text(
-            'এই সপ্তাহে আপনার শরীর, লক্ষ্য আর সমস্যার ভিত্তিতে ডিম, দুধ, কলা, মাছ, মাংস, ছোলা, কাঠবাদাম, ভাত আর সবজির ভারসাম্য রাখা হয়েছে।',
-            style: AppTextStyles.body.copyWith(
-              color: Colors.white.withValues(alpha: 0.85),
-              fontSize: 13.5,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 22),
+          const SizedBox(height: 16),
           // Clean layout of target macros styled like a premium tracker
           Row(
             children: [
@@ -221,7 +189,7 @@ class _PlanHeroCard extends StatelessWidget {
                   label: 'আজকের লক্ষ্য',
                   value: '${BengaliFormatters.toBengaliNumber(totalToday.round())}',
                   unit: 'kcal',
-                  color: const Color(0xFF81C784),
+                  color: const Color(0xFF2D6A4F),
                   icon: Icons.local_fire_department_rounded,
                 ),
               ),
@@ -231,7 +199,7 @@ class _PlanHeroCard extends StatelessWidget {
                   label: 'প্রোটিন',
                   value: '${BengaliFormatters.toBengaliNumber(proteinTarget)}',
                   unit: 'g',
-                  color: const Color(0xFF64B5F6),
+                  color: const Color(0xFF1E88E5),
                   icon: Icons.egg_alt_rounded,
                 ),
               ),
@@ -241,7 +209,7 @@ class _PlanHeroCard extends StatelessWidget {
                   label: 'কার্বস',
                   value: '${BengaliFormatters.toBengaliNumber(carbTarget)}',
                   unit: 'g',
-                  color: const Color(0xFF81C784),
+                  color: const Color(0xFF43A047),
                   icon: Icons.grain_rounded,
                 ),
               ),
@@ -251,7 +219,7 @@ class _PlanHeroCard extends StatelessWidget {
                   label: 'ফ্যাট',
                   value: '${BengaliFormatters.toBengaliNumber(fatTarget)}',
                   unit: 'g',
-                  color: const Color(0xFFFFB74D),
+                  color: const Color(0xFFF57C00),
                   icon: Icons.opacity_rounded,
                 ),
               ),
@@ -281,45 +249,51 @@ class _MacroMiniCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE4EDE7)),
       ),
       child: Column(
         children: [
-          Icon(icon, color: color, size: 18),
+          Icon(icon, color: color, size: 16),
           const SizedBox(height: 6),
-          Text(
-            label,
-            style: AppTextStyles.caption.copyWith(
-              color: Colors.white.withValues(alpha: 0.6),
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              label,
+              style: AppTextStyles.caption.copyWith(
+                color: AppColors.textSecondary,
+                fontSize: 9.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
           const SizedBox(height: 4),
-          RichText(
-            text: TextSpan(
-              style: AppTextStyles.caption.copyWith(color: AppColors.white),
-              children: [
-                TextSpan(
-                  text: value,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: RichText(
+              text: TextSpan(
+                style: AppTextStyles.caption.copyWith(color: AppColors.textPrimary),
+                children: [
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                TextSpan(
-                  text: unit,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.white.withValues(alpha: 0.7),
-                    fontWeight: FontWeight.w500,
+                  TextSpan(
+                    text: unit,
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: AppColors.textSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ],
