@@ -464,6 +464,8 @@ class FoodResultBottomSheet extends ConsumerWidget {
           ),
         ),
       ),
+        ],
+      ),
     );
   }
 
